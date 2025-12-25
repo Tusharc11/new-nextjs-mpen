@@ -1,259 +1,132 @@
 #!/bin/bash
 # ============================================================================
-# COMPLETE EC2 BOOTSTRAP SCRIPT - AMAZON LINUX 2023
-# Paste this in EC2 User Data when creating instance
+# EC2 BOOTSTRAP SCRIPT - AMAZON LINUX 2023
 # ============================================================================
-
 set -e
 exec > >(tee /var/log/user-data.log)
 exec 2>&1
 
-echo "=========================================="
-echo "🚀 Starting EC2 Bootstrap - Amazon Linux 2023"
-echo "=========================================="
+echo "🚀 Starting EC2 Bootstrap"
 
-# Get EC2 region
+# ----------------------------
+# Detect region
+# ----------------------------
 REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
 echo "Region: $REGION"
 
-# ============================================================================
-# STEP 1: System Updates
-# ============================================================================
-echo "[1/9] Updating system..."
+# ----------------------------
+# System update
+# ----------------------------
 dnf update -y
 
-# ============================================================================
-# STEP 2: Install Node.js 20.x LTS
-# ============================================================================
-echo "[2/9] Installing Node.js..."
-
-# Download and install Node.js 20.x
+# ----------------------------
+# Install Node.js 20
+# ----------------------------
 curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
 dnf install -y nodejs
 
-echo "✅ Node.js installed: $(node --version)"
-echo "✅ npm installed: $(npm --version)"
-
-# ============================================================================
-# STEP 3: Install PM2 (Process Manager)
-# ============================================================================
-echo "[3/9] Installing PM2..."
+# ----------------------------
+# Install PM2
+# ----------------------------
 npm install -g pm2
 
-echo "✅ PM2 installed: $(pm2 --version)"
-
-# ============================================================================
-# STEP 4: Install Nginx (Reverse Proxy)
-# ============================================================================
-echo "[4/9] Installing Nginx..."
+# ----------------------------
+# Install Nginx
+# ----------------------------
 dnf install -y nginx
-
-# Start and enable Nginx
-systemctl start nginx
 systemctl enable nginx
+systemctl start nginx
 
-echo "✅ Nginx installed: $(nginx -v 2>&1)"
-
-# ============================================================================
-# STEP 5: AWS CLI is pre-installed on Amazon Linux
-# ============================================================================
-echo "[5/9] Verifying AWS CLI..."
-echo "✅ AWS CLI: $(aws --version)"
-
-# ============================================================================
-# STEP 6: Create Application Structure
-# ============================================================================
-echo "[6/9] Creating application directories..."
-mkdir -p /var/www/nextjs-app
+# ----------------------------
+# App directories
+# ----------------------------
 mkdir -p /var/www/nextjs-app/logs
 chown -R ec2-user:ec2-user /var/www/nextjs-app
 
-# ============================================================================
-# STEP 7: Fetch Environment Variables from SSM
-# ============================================================================
-echo "[7/9] Fetching environment variables from SSM..."
+# ----------------------------
+# Fetch ENV from SSM
+# ----------------------------
+echo "Fetching environment variables from SSM"
 
-# Function to get SSM parameter
+SSM_BASE="/mpencil-app/test"
+
 get_ssm_param() {
-    aws ssm get-parameter --name "$1" --with-decryption --region $REGION --query 'Parameter.Value' --output text 2>/dev/null || echo ""
+  aws ssm get-parameter \
+    --name "$1" \
+    --with-decryption \
+    --region "$REGION" \
+    --query 'Parameter.Value' \
+    --output text
 }
 
-# Create environment file with SSM values
 cat > /var/www/nextjs-app/.env.production << EOF
-# Auto-generated from AWS SSM Parameter Store
-# Generated at: $(date)
-
 NODE_ENV=production
 PORT=3000
 
 # Database
-MONGODB_URI=$(get_ssm_param "/nextjs-app/mongodb-uri")
+MONGODB_URI=$(get_ssm_param "$SSM_BASE/MONGODB_URI")
 
-# Authentication
-NEXTAUTH_URL=$(get_ssm_param "/nextjs-app/nextauth-url")
-NEXTAUTH_SECRET=$(get_ssm_param "/nextjs-app/nextauth-secret")
-JWT_SECRET=$(get_ssm_param "/nextjs-app/jwt-secret")
+# Auth
+JWT_SECRET=$(get_ssm_param "$SSM_BASE/JWT_SECRET")
 
-# API Configuration
-NEXT_PUBLIC_API_URL=$(get_ssm_param "/nextjs-app/public-api-url")
-API_SECRET_KEY=$(get_ssm_param "/nextjs-app/api-secret")
-
-# Application
-NEXT_PUBLIC_APP_NAME=ERP Application
+# S3
+S3_REGION=$(get_ssm_param "$SSM_BASE/S3_REGION")
+S3_ACCESS_KEY_ID=$(get_ssm_param "$SSM_BASE/S3_ACCESS_KEY_ID")
+S3_SECRET_ACCESS_KEY=$(get_ssm_param "$SSM_BASE/S3_SECRET_ACCESS_KEY")
+S3_BUCKET_NAME=$(get_ssm_param "$SSM_BASE/S3_BUCKET_NAME")
 EOF
 
-chown ec2-user:ec2-user /var/www/nextjs-app/.env.production
 chmod 600 /var/www/nextjs-app/.env.production
+chown ec2-user:ec2-user /var/www/nextjs-app/.env.production
 
-echo "✅ Environment variables loaded from SSM"
+echo "SSM env vars written to .env.production"
 
-# ============================================================================
-# STEP 8: Configure Nginx
-# ============================================================================
-echo "[8/9] Configuring Nginx..."
-
-cat > /etc/nginx/conf.d/nextjs-app.conf << 'NGINX_CONFIG'
-# Redirect HTTP to HTTPS
+# ----------------------------
+# Nginx config
+# ----------------------------
+cat > /etc/nginx/conf.d/nextjs-app.conf << 'NGINX'
 server {
     listen 80;
     server_name testapp.mpencil.in;
-    
-    # Redirect all HTTP to HTTPS
-    return 301 https://$server_name$request_uri;
-}
 
-# HTTPS Server
-server {
-    listen 443 ssl http2;
-    server_name testapp.mpencil.in;
-    
-    # SSL certificates (will be added by Certbot)
-    # ssl_certificate /etc/letsencrypt/live/testapp.mpencil.in/fullchain.pem;
-    # ssl_certificate_key /etc/letsencrypt/live/testapp.mpencil.in/privkey.pem;
-    
-    # Security headers
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    
-    # Logs
-    access_log /var/log/nginx/nextjs-access.log;
-    error_log /var/log/nginx/nextjs-error.log;
-    
-    # Proxy to Next.js
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
-        
-        # WebSocket support
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        
-        # Headers
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # Timeouts
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
     }
-    
-    # Health check
-    location /api/health {
-        proxy_pass http://localhost:3000/api/health;
-        access_log off;
-    }
-    
-    # Static files caching
-    location /_next/static {
-        proxy_pass http://localhost:3000;
-        proxy_cache_valid 60m;
-        add_header Cache-Control "public, max-age=3600, immutable";
-    }
-    
-    # Max upload size
-    client_max_body_size 10M;
 }
-NGINX_CONFIG
+NGINX
 
-# Test and restart Nginx
 nginx -t && systemctl restart nginx
 
-echo "✅ Nginx configured"
-
-# ============================================================================
-# STEP 9: Setup PM2
-# ============================================================================
-echo "[9/9] Configuring PM2..."
-
-# Create PM2 ecosystem file
-cat > /var/www/nextjs-app/ecosystem.config.js << 'PM2_CONFIG'
+# ----------------------------
+# PM2 config
+# ----------------------------
+cat > /var/www/nextjs-app/ecosystem.config.js << 'PM2'
 module.exports = {
   apps: [{
     name: 'nextjs-app',
     script: 'npm',
     args: 'start',
     cwd: '/var/www/nextjs-app',
-    instances: 1,
-    autorestart: true,
-    watch: false,
-    max_memory_restart: '1G',
     env_file: '/var/www/nextjs-app/.env.production',
-    error_file: '/var/www/nextjs-app/logs/err.log',
-    out_file: '/var/www/nextjs-app/logs/out.log',
-    log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-    merge_logs: true,
-    kill_timeout: 5000,
-    listen_timeout: 3000,
+    autorestart: true,
+    watch: false
   }]
 }
-PM2_CONFIG
+PM2
 
 chown ec2-user:ec2-user /var/www/nextjs-app/ecosystem.config.js
 
-# Setup PM2 to start on boot
+# Enable PM2 on boot
 env PATH=$PATH:/usr/bin /usr/local/lib/node_modules/pm2/bin/pm2 startup systemd -u ec2-user --hp /home/ec2-user
 
-echo "✅ PM2 configured"
-
-# ============================================================================
-# STEP 10: Configure SELinux (Amazon Linux specific)
-# ============================================================================
-echo "[10/10] Configuring SELinux for Nginx..."
-
-# Allow Nginx to connect to Node.js
+# Allow Nginx → Node
 setsebool -P httpd_can_network_connect 1
 
-echo "✅ SELinux configured"
-
-# ============================================================================
-# FINAL: Print Summary
-# ============================================================================
-echo ""
-echo "=========================================="
-echo "✅ BOOTSTRAP COMPLETED!"
-echo "=========================================="
-echo ""
-echo "Installed:"
-echo "  - Node.js: $(node --version)"
-echo "  - npm: $(npm --version)"
-echo "  - PM2: $(pm2 --version)"
-echo "  - Nginx: $(nginx -v 2>&1 | grep -o 'nginx/[0-9.]*')"
-echo "  - AWS CLI: $(aws --version | cut -d' ' -f1)"
-echo ""
-echo "Application directory: /var/www/nextjs-app"
-echo "Default user: ec2-user"
-echo "Environment loaded from: AWS SSM Parameter Store"
-echo ""
-echo "Next steps:"
-echo "1. Add SSL certificate for testapp.mpencil.in"
-echo "2. Deploy application via GitHub Actions"
-echo ""
-echo "=========================================="
-
-exit 0
+echo "✅ Bootstrap completed"

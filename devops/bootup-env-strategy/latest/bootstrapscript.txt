@@ -24,6 +24,7 @@ mkdir -p /var/www/nextjs-app/logs
 chown -R ec2-user:ec2-user /var/www/nextjs-app
 
 # Configure Nginx to forward traffic to Next.js (port 3000)
+# Initially HTTP only - HTTPS will be added after SSL certificate setup
 cat > /etc/nginx/conf.d/nextjs-app.conf << 'EOF'
 server {
     listen 80;
@@ -36,6 +37,9 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 EOF

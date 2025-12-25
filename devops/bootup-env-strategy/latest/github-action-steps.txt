@@ -1,0 +1,621 @@
+# Complete Deployment Guide - With SSM Fetch Script
+
+## Overview
+
+We'll use a **dedicated SSM fetch script** that runs on EC2 during deployment to automatically create the `.env.production` file.
+
+---
+
+## Architecture
+
+```
+GitHub Actions (ubuntu-latest - GitHub's server)
+    ↓ Builds app
+    ↓ Uploads to EC2
+    ↓ SSH into EC2
+          ↓
+EC2 (Amazon Linux 2023 - Your server)
+    ↓ Runs SSM fetch script
+    ↓ Creates .env.production
+    ↓ PM2 starts app
+```
+
+**Important:** `runs-on: ubuntu-latest` means GitHub Actions runs on **GitHub's Ubuntu server** (not your EC2). This is free and provided by GitHub. Your EC2 stays Amazon Linux.
+
+---
+
+## Step 1: Add Files to Repository
+
+You have **3 options** to add files. Choose one:
+
+### Option A: Using Git Bash (Windows)
+
+#### Install Git Bash (if not installed)
+
+1. Download: https://git-scm.com/download/win
+2. Install with default settings
+3. Open **Git Bash** from Start Menu
+
+#### Clone Repository
+
+```bash
+# Clone the repository
+cd /c/Users/YourName/Documents  # Navigate to your desired folder
+git clone https://github.com/Tusharc11/new-nextjs-mpen.git
+cd new-nextjs-mpen
+
+# Check current branch
+git branch
+# Shows: * main (or * master)
+```
+
+#### Create Directory Structure
+
+```bash
+# Create workflows directory
+mkdir -p .github/workflows
+
+# Create health check directory (check your Next.js version first)
+# For App Router (Next.js 13+):
+mkdir -p app/api/health
+
+# For Pages Router (Next.js 12):
+mkdir -p pages/api
+```
+
+#### Create Files Using Git Bash
+
+```bash
+# Create GitHub Actions workflow
+touch .github/workflows/deploy.yml
+
+# Create PM2 config
+touch ecosystem.config.js
+
+# Create SSM fetch script
+touch fetch-ssm-env.sh
+
+# Create health check (choose one)
+touch app/api/health/route.js     # For App Router
+# OR
+touch pages/api/health.js          # For Pages Router
+```
+
+#### Open Files and Paste Content
+
+**Option 1: Use VS Code**
+```bash
+# Open entire project in VS Code
+code .
+```
+
+**Option 2: Use Notepad++**
+```bash
+# Open specific file in Notepad++
+notepad++ .github/workflows/deploy.yml
+```
+
+**Option 3: Use Windows Notepad**
+```bash
+# Open with default text editor
+notepad .github/workflows/deploy.yml
+```
+
+Then paste the content from the artifacts below.
+
+---
+
+### Option B: Using GitHub Web UI (No Git Bash Required)
+
+#### 1. Go to Your Repository
+```
+https://github.com/Tusharc11/new-nextjs-mpen
+```
+
+#### 2. Create Workflow File
+
+1. Click **"Add file"** → **"Create new file"**
+2. In filename box, type: `.github/workflows/deploy.yml`
+   - GitHub automatically creates folders when you use `/`
+3. Paste content from **Artifact #1** below
+4. Scroll down, commit message: "Add deployment workflow"
+5. Click **"Commit new file"**
+
+#### 3. Create PM2 Config
+
+1. Click **"Add file"** → **"Create new file"**
+2. Filename: `ecosystem.config.js`
+3. Paste content from **Artifact #2** below
+4. Commit: "Add PM2 config"
+
+#### 4. Create SSM Script
+
+1. Click **"Add file"** → **"Create new file"**
+2. Filename: `fetch-ssm-env.sh`
+3. Paste content from **Artifact #3** below
+4. Commit: "Add SSM fetch script"
+
+#### 5. Create Health Check
+
+**For App Router:**
+1. Click **"Add file"** → **"Create new file"**
+2. Filename: `app/api/health/route.js`
+3. Paste content from **Artifact #4** below
+4. Commit: "Add health check endpoint"
+
+**For Pages Router:**
+1. Filename: `pages/api/health.js`
+2. Paste content from **Artifact #5** below
+
+---
+
+### Option C: Using Windows File Explorer + Git Bash Commit
+
+#### 1. Clone Repository
+
+Open **Git Bash**:
+```bash
+cd /c/Users/YourName/Documents
+git clone https://github.com/Tusharc11/new-nextjs-mpen.git
+cd new-nextjs-mpen
+```
+
+#### 2. Open Folder in Windows Explorer
+
+```bash
+# Open current folder in Windows Explorer
+explorer .
+```
+
+#### 3. Create Folders Using Windows
+
+- Right-click → New → Folder → `.github`
+- Inside `.github` → New → Folder → `workflows`
+- Create folders: `app\api\health` (if App Router)
+
+#### 4. Create Files Using Notepad
+
+- Right-click in folder → New → Text Document
+- Rename to: `deploy.yml` (remove .txt extension)
+- Double-click to open
+- Paste content from artifacts below
+- Save and close
+
+Repeat for all files.
+
+#### 5. Commit Using Git Bash
+
+```bash
+# In Git Bash, in repository folder
+git add .
+git commit -m "Add deployment configuration"
+git push origin main
+```
+
+---
+
+## Step 2: All Required Files
+
+### Artifact #1: GitHub Actions Workflow
+
+**File:** `.github/workflows/deploy.yml`### Artifact #2: PM2 Config
+
+**File:** `ecosystem.config.js`### Artifact #3: SSM Fetch Script
+
+**File:** `fetch-ssm-env.sh`### Artifact #4: Health Check (App Router)
+
+**File:** `app/api/health/route.js`
+
+```javascript
+// app/api/health/route.js
+import { NextResponse } from 'next/server';
+
+export async function GET() {
+  return NextResponse.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
+}
+```
+
+### Artifact #5: Health Check (Pages Router)
+
+**File:** `pages/api/health.js`
+
+```javascript
+// pages/api/health.js
+export default function handler(req, res) {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
+}
+```
+
+---
+
+## Step 3: Create GitHub Secrets (Windows Steps)
+
+### 3.1: Get Your SSH Key Content
+
+Open **PowerShell** (Windows key + X → PowerShell):
+
+```powershell
+# Navigate to where you saved the .pem file
+cd C:\Users\YourName\Downloads
+
+# Display the key content
+Get-Content nextjs-erp-key.pem -Raw
+```
+
+**Or use Notepad:**
+1. Right-click `nextjs-erp-key.pem`
+2. Open with Notepad
+3. Copy **EVERYTHING** (Ctrl+A, Ctrl+C)
+
+The content looks like:
+```
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEA...
+... many lines ...
+-----END RSA PRIVATE KEY-----
+```
+
+### 3.2: Add Secrets in GitHub
+
+#### Navigate to Secrets Page
+
+**Option 1: Direct URL**
+```
+https://github.com/Tusharc11/new-nextjs-mpen/settings/secrets/actions
+```
+
+**Option 2: Manual**
+1. Go to: https://github.com/Tusharc11/new-nextjs-mpen
+2. Click **Settings** tab (top menu)
+3. Left sidebar: **Secrets and variables** → **Actions**
+
+#### Add Secret #1: EC2_HOST
+
+1. Click **"New repository secret"** (green button)
+2. Fill in:
+   - **Name:** `EC2_HOST`
+   - **Secret:** `testapp.mpencil.in`
+3. Click **"Add secret"**
+
+#### Add Secret #2: EC2_SSH_KEY
+
+1. Click **"New repository secret"**
+2. Fill in:
+   - **Name:** `EC2_SSH_KEY`
+   - **Secret:** Paste the **entire .pem file content** from step 3.1
+3. **Critical:** Must include BEGIN and END lines
+4. Click **"Add secret"**
+
+#### Verify Secrets
+
+You should see:
+- ✅ `EC2_HOST`
+- ✅ `EC2_SSH_KEY`
+
+---
+
+## Step 4: Commit and Push (Choose Method)
+
+### Method A: Git Bash
+
+```bash
+# Check what files you're adding
+git status
+
+# Add all files
+git add .github/workflows/deploy.yml
+git add ecosystem.config.js
+git add fetch-ssm-env.sh
+git add app/api/health/route.js  # or pages/api/health.js
+
+# Or add everything
+git add .
+
+# Commit
+git commit -m "Add deployment configuration with SSM script
+
+- GitHub Actions workflow for CI/CD
+- PM2 ecosystem config
+- SSM parameter fetch script
+- Health check endpoint
+"
+
+# Push (triggers deployment!)
+git push origin main
+```
+
+### Method B: GitHub Desktop (Windows GUI)
+
+1. Download: https://desktop.github.com
+2. Install and login
+3. Add repository: File → Add Local Repository
+4. Select your repo folder
+5. Check boxes for all files
+6. Commit message: "Add deployment configuration"
+7. Click **"Commit to main"**
+8. Click **"Push origin"** (triggers deployment!)
+
+### Method C: Already Added via Web UI
+
+If you added files via GitHub web interface, they're already committed and pushed. Skip to Step 5.
+
+---
+
+## Step 5: Monitor Deployment
+
+### 5.1: Go to Actions Tab
+
+```
+https://github.com/Tusharc11/new-nextjs-mpen/actions
+```
+
+### 5.2: Watch Workflow
+
+1. You'll see a new workflow run (appears within seconds)
+2. Click on it
+3. Click **"deploy"** job
+4. Watch steps execute:
+
+```
+✅ Checkout Code             (~5 sec)
+✅ Setup Node.js             (~10 sec)
+✅ Install Dependencies      (~30-60 sec)
+✅ Build Application         (~30-90 sec)
+✅ Create Deployment Package (~10 sec)
+✅ Upload to EC2             (~10-30 sec)
+✅ Deploy Application        (~60-120 sec)
+   ├─ Extract files
+   ├─ Install dependencies
+   ├─ Run SSM fetch script  ← Creates .env.production
+   ├─ PM2 reload
+   └─ Verify status
+✅ Deployment Summary        (~5 sec)
+```
+
+### 5.3: Check SSM Script Output
+
+In the "Deploy Application" step, you'll see:
+
+```
+========================================
+SSM Parameter Fetcher
+========================================
+Configuration:
+  SSM Path: /mpencil-app/test
+  Target File: /var/www/nextjs-app/.env.production
+  Region: us-east-1
+
+Found 6 parameter(s)
+Processing parameters...
+
+  ✓ MONGODB_URI
+  ✓ JWT_SECRET
+  ✓ S3_REGION
+  ✓ S3_ACCESS_KEY_ID
+  ✓ S3_SECRET_ACCESS_KEY
+  ✓ S3_BUCKET_NAME
+
+Environment file created!
+```
+
+### 5.4: Success Indicators
+
+All steps show green checkmarks ✅
+
+Final message:
+```
+✅ Deployment completed!
+🌐 URL: https://testapp.mpencil.in
+```
+
+---
+
+## Step 6: Verify Deployment
+
+### 6.1: Test in Browser
+
+Open: `https://testapp.mpencil.in`
+
+Should see:
+- ✅ Green lock (HTTPS)
+- ✅ Your Next.js app loads
+- ✅ All features work
+
+### 6.2: Test Health Endpoint
+
+Open: `https://testapp.mpencil.in/api/health`
+
+Should return:
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-...",
+  "uptime": 123.45
+}
+```
+
+### 6.3: SSH Check (Optional)
+
+**Using PowerShell on Windows:**
+
+```powershell
+# Navigate to key location
+cd C:\Users\YourName\Downloads
+
+# SSH into EC2
+ssh -i nextjs-erp-key.pem ec2-user@testapp.mpencil.in
+```
+
+**Using Git Bash:**
+
+```bash
+# SSH into EC2
+ssh -i /c/Users/YourName/Downloads/nextjs-erp-key.pem ec2-user@testapp.mpencil.in
+```
+
+**Once connected:**
+
+```bash
+# Check PM2 status
+pm2 status
+# Should show: nextjs-app | online
+
+# Check .env file was created
+ls -la /var/www/nextjs-app/.env.production
+
+# View .env structure (values hidden)
+grep -v '^#' /var/www/nextjs-app/.env.production | grep -v '^$' | sed 's/=.*/=***/'
+
+# View logs
+pm2 logs nextjs-app --lines 20
+
+# Exit
+exit
+```
+
+---
+
+## Understanding: Why `runs-on: ubuntu-latest`?
+
+### Common Confusion
+
+**Question:** "My EC2 is Amazon Linux, why does workflow say `ubuntu-latest`?"
+
+**Answer:** Because they're **different machines**!
+
+```
+┌─────────────────────────────────────────┐
+│  GitHub Actions Server                  │
+│  (GitHub's infrastructure - FREE)       │
+│                                         │
+│  OS: ubuntu-latest                      │
+│  Purpose: Build your app                │
+│  Location: GitHub's data center         │
+│                                         │
+│  What it does:                          │
+│  1. Checkout code                       │
+│  2. Install Node.js                     │
+│  3. Run npm ci                          │
+│  4. Run npm run build                   │
+│  5. Create package                      │
+│  6. Upload to YOUR EC2 via SSH          │
+└────────────┬────────────────────────────┘
+             │ SSH connection
+             ↓
+┌─────────────────────────────────────────┐
+│  Your EC2 Server                        │
+│  (Your AWS account)                     │
+│                                         │
+│  OS: Amazon Linux 2023                  │
+│  Purpose: Run your app                  │
+│  Location: AWS data center              │
+│                                         │
+│  What it does:                          │
+│  1. Receive package from GitHub         │
+│  2. Extract files                       │
+│  3. Run SSM fetch script                │
+│  4. Start app with PM2                  │
+└─────────────────────────────────────────┘
+```
+
+**Key Points:**
+- ✅ GitHub Actions runs on **GitHub's Ubuntu server** (free)
+- ✅ Your app runs on **your Amazon Linux EC2**
+- ✅ GitHub builds, your EC2 runs
+- ✅ They communicate via SSH
+
+**You don't need to change `runs-on: ubuntu-latest`** - it's correct!
+
+---
+
+## Complete File Checklist
+
+Verify you have these files:
+
+```
+new-nextjs-mpen/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml           ← Artifact #1
+├── app/api/health/
+│   └── route.js                 ← Artifact #4 (App Router)
+OR
+├── pages/api/
+│   └── health.js                ← Artifact #5 (Pages Router)
+├── ecosystem.config.js          ← Artifact #2
+├── fetch-ssm-env.sh             ← Artifact #3
+├── package.json
+└── ... (other existing files)
+```
+
+---
+
+## Troubleshooting
+
+### Issue: SSM Script Fails
+
+**Error in logs:** `No parameters found at path: /mpencil-app/test`
+
+**Check:**
+1. SSM parameters exist in AWS
+2. IAM role is attached to EC2
+3. Parameter names match exactly
+
+**Solution:**
+```bash
+# SSH into EC2
+ssh -i nextjs-erp-key.pem ec2-user@testapp.mpencil.in
+
+# Test SSM access
+aws ssm get-parameters-by-path \
+  --path "/mpencil-app/test" \
+  --with-decryption
+
+# If error, check IAM role
+# EC2 Console → Instance → Actions → Security → Modify IAM role
+```
+
+### Issue: jq Not Found
+
+**Error:** `jq: command not found`
+
+**Solution:** Script auto-installs jq. If it fails:
+
+```bash
+# SSH into EC2
+sudo dnf install -y jq
+```
+
+### Issue: Permission Denied on Script
+
+**Error:** `Permission denied: fetch-ssm-env.sh`
+
+**Solution:** Script is made executable in workflow. If manual run:
+
+```bash
+chmod +x /var/www/nextjs-app/fetch-ssm-env.sh
+```
+
+---
+
+## Summary
+
+✅ **No GitHub Runner needed** - Uses GitHub's free infrastructure  
+✅ **SSM script runs on EC2** - Automatically creates .env.production  
+✅ **3 ways to add files** - Git Bash, Web UI, or GitHub Desktop  
+✅ **Windows-friendly** - PowerShell and Git Bash instructions  
+✅ **Automatic deployment** - Just push code!  
+
+**Total files to add:** 4 files  
+**Total secrets:** 2 secrets  
+**Deployment time:** 3-5 minutes  
+
+🚀 **Your app is now ready for automated deployment!**

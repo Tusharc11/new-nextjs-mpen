@@ -1,0 +1,416 @@
+# Complete AWS EC2 Setup Guide (Step-by-Step with Screenshots)
+
+## Prerequisites
+- AWS Account (Free tier works)
+- GitHub account
+- 10 minutes of time
+
+---
+
+## Part 1: Create EC2 Instance
+
+### Step 1: Go to EC2 Dashboard
+1. Login to AWS Console: https://console.aws.amazon.com
+2. In the search bar, type **"EC2"** and click on **EC2**
+3. Make sure you're in your preferred region (top-right, e.g., **US East (N. Virginia)**)
+
+### Step 2: Launch Instance
+1. Click the orange **"Launch Instance"** button
+2. You'll see the "Launch an instance" page
+
+---
+
+## Part 2: Configure Instance
+
+### Step 3: Name and Tags
+```
+Name: nextjs-erp-production
+```
+(You can name it anything)
+
+### Step 4: Application and OS Images (AMI)
+1. Select: **Ubuntu**
+2. Choose: **Ubuntu Server 22.04 LTS (HVM), SSD Volume Type**
+3. Architecture: **64-bit (x86)**
+4. Make sure it says **"Free tier eligible"**
+
+### Step 5: Instance Type
+1. Select: **t2.small** (minimum recommended)
+   - t2.micro (1 GB RAM) - Too small for production
+   - **t2.small (2 GB RAM)** - Good for small apps ✅
+   - t2.medium (4 GB RAM) - Better for larger apps
+
+**Cost:** ~$17/month for t2.small (check current pricing)
+
+### Step 6: Key Pair (Important!)
+1. Click **"Create new key pair"**
+2. Key pair name: `nextjs-erp-key`
+3. Key pair type: **RSA**
+4. Private key file format: **.pem**
+5. Click **"Create key pair"**
+6. **SAVE THE FILE SAFELY** - You'll need this for GitHub Actions!
+
+### Step 7: Network Settings
+Click **"Edit"** next to Network settings
+
+1. **Auto-assign public IP:** Enable
+2. **Firewall (security groups):** Create security group
+3. Security group name: `nextjs-erp-sg`
+4. Description: `Security group for Next.js ERP application`
+
+**Inbound Security Group Rules:**
+
+| Type | Protocol | Port Range | Source | Description |
+|------|----------|------------|--------|-------------|
+| SSH | TCP | 22 | My IP | SSH access (will be restricted to your IP) |
+| HTTP | TCP | 80 | 0.0.0.0/0 | Web traffic |
+| HTTPS | TCP | 443 | 0.0.0.0/0 | Secure web traffic |
+
+> **Important:** "My IP" for SSH means only your current IP can SSH. GitHub Actions will still work for deployment.
+
+### Step 8: Configure Storage
+1. **Size (GiB):** 20 GB (minimum)
+   - 20 GB for small apps
+   - 30 GB for medium apps with lots of uploads
+2. **Volume type:** gp3 (General Purpose SSD)
+3. Delete on termination: **Checked** (recommended)
+
+### Step 9: Advanced Details (Critical!)
+
+Scroll down to **"Advanced details"** section and expand it.
+
+Scroll to the bottom to find **"User data"** text box.
+
+**Copy and paste the ENTIRE bootstrap script from Artifact #1** into this box.
+
+This script will:
+- Install Node.js, PM2, Nginx automatically
+- Create all necessary directories
+- Configure environment files
+- Set up the application structure
+
+### Step 10: Launch Instance
+1. Review all settings in the summary on the right
+2. Click **"Launch instance"**
+3. Wait 2-3 minutes for instance to start
+
+---
+
+## Part 3: Get Your EC2 IP Address
+
+### Step 11: Find Your Instance
+1. Click **"View all instances"** or go to EC2 Dashboard → Instances
+2. Find your instance: `nextjs-erp-production`
+3. Wait until **"Instance state"** shows **"Running"** (green)
+4. Wait until **"Status check"** shows **"2/2 checks passed"**
+
+### Step 12: Get Public IP
+1. Select your instance (checkbox)
+2. In the **"Details"** tab below, find:
+   - **Public IPv4 address**: e.g., `54.123.45.67`
+   - Copy this IP - you'll need it for GitHub Secrets!
+
+### Step 13: Optional - Allocate Elastic IP (Recommended)
+
+**Why?** Regular public IPs change when you stop/start EC2. Elastic IP is permanent.
+
+1. EC2 Dashboard → **Elastic IPs** (left sidebar)
+2. Click **"Allocate Elastic IP address"**
+3. Click **"Allocate"**
+4. Select the new IP → **Actions** → **"Associate Elastic IP address"**
+5. Choose your instance: `nextjs-erp-production`
+6. Click **"Associate"**
+
+Now use this Elastic IP instead of the regular public IP.
+
+---
+
+## Part 4: Verify Bootstrap Script Execution
+
+### Step 14: Check User Data Script
+The bootstrap script runs automatically when EC2 starts. Let's verify:
+
+1. SSH into your EC2 (or use EC2 Instance Connect):
+
+```bash
+ssh -i nextjs-erp-key.pem ubuntu@YOUR_EC2_IP
+```
+
+Or use **EC2 Instance Connect** (browser-based SSH):
+- Select instance → **Connect** → **EC2 Instance Connect** → **Connect**
+
+2. Check if bootstrap completed:
+
+```bash
+# Check if bootstrap script ran successfully
+cat /var/log/user-data.log | tail -50
+
+# You should see: "✅ EC2 BOOTSTRAP COMPLETED SUCCESSFULLY!"
+
+# Verify installations
+node --version     # Should show v20.x.x
+npm --version      # Should show npm version
+pm2 --version      # Should show PM2 version
+nginx -v           # Should show Nginx version
+
+# Check if app directory exists
+ls -la /var/www/nextjs-app
+
+# Check if environment file was created
+ls -la /var/www/nextjs-app/.env.production
+```
+
+If everything looks good, you're ready for deployment!
+
+---
+
+## Part 5: Update Environment Variables (Optional Manual Step)
+
+The bootstrap script creates a template `.env.production` file with placeholder values.
+
+**You have 2 options:**
+
+### Option A: Let GitHub Actions Update It (Recommended)
+The GitHub Actions workflow will automatically update environment variables on each deployment. Skip to Part 6.
+
+### Option B: Manually Update Now
+If you want to set them before first deployment:
+
+```bash
+# SSH into EC2
+ssh -i nextjs-erp-key.pem ubuntu@YOUR_EC2_IP
+
+# Edit environment file
+nano /var/www/nextjs-app/.env.production
+
+# Update the values, then save (Ctrl+X, Y, Enter)
+```
+
+---
+
+## Part 6: Setup GitHub Secrets
+
+1. Go to: `https://github.com/Tusharc11/new-nextjs-mpen/settings/secrets/actions`
+
+2. Click **"New repository secret"** for each secret (see Artifact #3 for complete list)
+
+**Minimum Required Secrets:**
+
+```
+EC2_HOST = YOUR_EC2_PUBLIC_IP  (e.g., 54.123.45.67)
+EC2_USERNAME = ubuntu
+EC2_SSH_KEY = [Paste entire content of your .pem file]
+MONGODB_URI = your-mongodb-connection-string
+NEXT_PUBLIC_API_URL = http://YOUR_EC2_IP
+```
+
+**How to copy SSH key:**
+```bash
+# On your local machine
+cat nextjs-erp-key.pem
+
+# Copy everything including BEGIN and END lines
+```
+
+---
+
+## Part 7: Add GitHub Actions Workflow
+
+### Step 15: Create Workflow File
+
+In your local repository:
+
+```bash
+# Navigate to your repository
+cd new-nextjs-mpen
+
+# Create workflow directory
+mkdir -p .github/workflows
+
+# Create workflow file (copy content from Artifact #2)
+nano .github/workflows/deploy.yml
+```
+
+Paste the content from **Artifact #2** (GitHub Actions Workflow).
+
+Save and commit:
+
+```bash
+git add .github/workflows/deploy.yml
+git commit -m "Add automated deployment workflow"
+git push origin main
+```
+
+---
+
+## Part 8: Deploy Your Application
+
+### Step 16: Trigger First Deployment
+
+**Option 1: Automatic (on push)**
+```bash
+# Make any change to trigger deployment
+git commit --allow-empty -m "Trigger first deployment"
+git push origin main
+```
+
+**Option 2: Manual trigger**
+1. Go to: `https://github.com/Tusharc11/new-nextjs-mpen/actions`
+2. Click **"Deploy to EC2"** workflow
+3. Click **"Run workflow"** → **"Run workflow"**
+
+### Step 17: Monitor Deployment
+
+1. Go to GitHub Actions: `https://github.com/Tusharc11/new-nextjs-mpen/actions`
+2. Click on the running workflow
+3. Watch the steps execute:
+   - ✅ Checkout code
+   - ✅ Build application
+   - ✅ Update environment variables
+   - ✅ Deploy to EC2
+   - ✅ Restart application
+
+**Deployment takes about 3-5 minutes.**
+
+---
+
+## Part 9: Verify Deployment
+
+### Step 18: Check Application
+
+1. **Browser:** Visit `http://YOUR_EC2_IP`
+   - You should see your Next.js application!
+
+2. **SSH Check:**
+```bash
+ssh -i nextjs-erp-key.pem ubuntu@YOUR_EC2_IP
+
+# Check PM2 status
+pm2 status
+
+# View logs
+pm2 logs nextjs-app --lines 50
+
+# Test locally
+curl http://localhost:3000
+```
+
+3. **Nginx Check:**
+```bash
+# Check Nginx status
+sudo systemctl status nginx
+
+# View Nginx logs
+sudo tail -f /var/log/nginx/access.log
+sudo tail -f /var/log/nginx/error.log
+```
+
+---
+
+## Part 10: Ongoing Updates (Zero Downtime)
+
+Now whenever you push code to main branch:
+
+1. GitHub Actions automatically triggers
+2. Builds your app
+3. Updates environment variables
+4. Deploys to EC2
+5. PM2 reloads with zero downtime
+
+**You never need to SSH into EC2 again!**
+
+---
+
+## Troubleshooting
+
+### If deployment fails:
+
+1. **Check GitHub Actions logs:**
+   - Go to Actions tab
+   - Click failed workflow
+   - Read error messages
+
+2. **Check EC2 logs:**
+```bash
+ssh -i nextjs-erp-key.pem ubuntu@YOUR_EC2_IP
+pm2 logs nextjs-app
+```
+
+3. **Common issues:**
+   - **Build fails:** Missing environment variables in GitHub Secrets
+   - **Can't connect to MongoDB:** Check MONGODB_URI is correct and URL-encoded
+   - **502 Bad Gateway:** Application not running, check PM2 logs
+   - **Connection refused:** Security group not configured properly
+
+---
+
+## Cost Estimation
+
+**Running 24/7 for 1 month:**
+
+- EC2 t2.small: ~$17/month
+- 20 GB EBS storage: ~$2/month
+- Data transfer: ~$1-5/month (depending on traffic)
+- Elastic IP: Free (if attached to running instance)
+
+**Total: ~$20-25/month**
+
+**To reduce costs:**
+- Use t2.micro (free tier for 12 months)
+- Stop instance when not in use
+- Use AWS Free Tier
+
+---
+
+## Next Steps
+
+1. **Setup Domain:** Point your domain to EC2 IP
+2. **Add HTTPS:** Install Let's Encrypt SSL certificate
+3. **Setup Monitoring:** CloudWatch, PM2 monitoring
+4. **Add Backups:** Automated database backups
+5. **Scale:** Add load balancer for multiple instances
+
+---
+
+## Security Best Practices
+
+1. **Keep packages updated:**
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+
+2. **Enable automatic security updates:**
+```bash
+sudo apt install unattended-upgrades
+sudo dpkg-reconfigure -plow unattended-upgrades
+```
+
+3. **Setup firewall:**
+```bash
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+```
+
+4. **Regular backups:**
+   - Snapshot EC2 instance weekly
+   - Backup MongoDB regularly
+
+---
+
+## Success Criteria
+
+✅ EC2 instance running
+✅ Bootstrap script completed successfully
+✅ Environment variables set (GitHub Secrets)
+✅ GitHub Actions workflow added
+✅ First deployment successful
+✅ Application accessible via browser
+✅ PM2 managing application
+✅ Nginx reverse proxy working
+✅ Zero downtime deployments working
+
+---
+
+You're done! Your application is now deployed with fully automated CI/CD! 🎉

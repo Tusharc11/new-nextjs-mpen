@@ -1,0 +1,80 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Next.js: debug server-side",
+        "type": "node",
+        "request": "launch",
+        "program": "${workspaceFolder}/node_modules/next/dist/bin/next",
+        "args": ["dev"],
+        "cwd": "${workspaceFolder}",
+        "console": "integratedTerminal",
+        "skipFiles": ["<node_internals>/**"],
+        "env": {
+          "NODE_OPTIONS": "--inspect"
+        }
+      },
+      {
+        "name": "Next.js: debug client-side",
+        "type": "node",
+        "request": "launch",
+        "program": "${workspaceFolder}/node_modules/next/dist/bin/next",
+        "args": ["dev"],
+        "cwd": "${workspaceFolder}",
+        "console": "integratedTerminal",
+        "skipFiles": ["<node_internals>/**"],
+        "runtimeArgs": ["--inspect-brk=9229"]
+      },
+      {
+        "name": "Next.js: debug client-side (Firefox)",
+        "type": "firefox",
+        "request": "launch",
+        "url": "http://localhost:3000",
+        "reAttach": true,
+        "pathMappings": [
+          {
+            "url": "webpack://_N_E",
+            "path": "${workspaceFolder}"
+          }
+        ]
+      },
+      {
+        "name": "Next.js: debug full stack",
+        "type": "node",
+        "request": "launch",
+        "program": "${workspaceFolder}/node_modules/next/dist/bin/next",
+        "args": ["dev"],
+        "cwd": "${workspaceFolder}",
+        "console": "integratedTerminal",
+        "skipFiles": ["<node_internals>/**"],
+        "serverReadyAction": {
+          "pattern": "started server on .+, url: (https?://.+)",
+          "uriFormat": "%s",
+          "action": "debugWithChrome"
+        },
+        "env": {
+          "NODE_OPTIONS": "--inspect"
+        }
+      },
+      {
+        "name": "Debug Next.js in Chrome",
+        "type": "chrome",
+        "request": "launch",
+        "url": "http://localhost:3000",
+        "webRoot": "${workspaceFolder}",
+        "sourceMaps": true,
+        "sourceMapPathOverrides": {
+          "webpack://_N_E/*": "${webRoot}/*",
+          "webpack://app/*": "${workspaceFolder}/app/*"
+        },
+        "userDataDir": false,
+        "runtimeArgs": [
+          "--disable-web-security"
+        ],
+        "skipFiles": [
+          "<node_internals>/**",
+          "${workspaceFolder}/node_modules/**"
+        ]
+      }
+    ]
+  }

@@ -1,0 +1,137 @@
+name: Deploy to EC2
+
+# Runs on GitHub's Ubuntu server (free, no setup needed)
+# Your EC2 stays Amazon Linux
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  # GitHub's server, not your EC2
+    
+    steps:
+      # Step 1: Get code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Step 3: Install dependencies
+      - name: Install Dependencies
+        run: npm ci
+
+      # Step 4: Build Next.js app
+      - name: Build Application
+        env:
+          NODE_ENV: production
+        run: npm run build
+
+      # Step 5: Create deployment package
+      - name: Create Deployment Package
+        run: |
+          mkdir -p deploy-package
+          cp -r .next deploy-package/
+          cp -r public deploy-package/ 2>/dev/null || true
+          cp package.json deploy-package/
+          cp package-lock.json deploy-package/
+          cp next.config.* deploy-package/ 2>/dev/null || true
+          cp ecosystem.config.js deploy-package/
+          cp fetch-ssm-env.sh deploy-package/
+          tar -czf deploy.tar.gz -C deploy-package .
+          echo "Package size: $(du -h deploy.tar.gz | cut -f1)"
+
+      # Step 6: Upload to EC2
+      - name: Upload to EC2
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "deploy.tar.gz"
+          target: "/home/ec2-user/"
+
+      # Step 7: Deploy on EC2
+      - name: Deploy Application
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -e
+            
+            APP_DIR="/var/www/nextjs-app"
+            
+            echo "=========================================="
+            echo "Starting Deployment"
+            echo "=========================================="
+            
+            # Extract package
+            echo "Extracting files..."
+            cd $APP_DIR
+            sudo tar -xzf /home/ec2-user/deploy.tar.gz
+            sudo rm /home/ec2-user/deploy.tar.gz
+            sudo chown -R ec2-user:ec2-user $APP_DIR
+            
+            # Make SSM script executable
+            chmod +x $APP_DIR/fetch-ssm-env.sh
+            
+            # Install production dependencies
+            echo "Installing dependencies..."
+            npm ci --omit=dev --prefer-offline --no-audit
+            
+            # Run SSM fetch script to create .env.production
+            echo "Fetching environment variables from SSM..."
+            cd $APP_DIR
+            SSM_PATH="/mpencil-app/test" \
+            ENV_FILE="$APP_DIR/.env.production" \
+            ./fetch-ssm-env.sh
+            
+            # Verify .env file was created
+            if [ ! -f "$APP_DIR/.env.production" ]; then
+              echo "ERROR: .env.production was not created"
+              exit 1
+            fi
+            
+            echo "Environment file created successfully"
+            
+            # Reload app with PM2 (zero downtime)
+            echo "Reloading application..."
+            if pm2 describe nextjs-app > /dev/null 2>&1; then
+              pm2 reload ecosystem.config.js --update-env
+              echo "App reloaded (zero downtime)"
+            else
+              pm2 start ecosystem.config.js
+              echo "App started"
+            fi
+            
+            pm2 save
+            
+            # Wait and check status
+            sleep 5
+            
+            if pm2 describe nextjs-app | grep -q "online"; then
+              echo "✅ Deployment successful!"
+              pm2 status
+            else
+              echo "❌ Deployment failed"
+              pm2 logs nextjs-app --lines 50
+              exit 1
+            fi
+
+      # Step 8: Summary
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo "✅ Deployment completed!"
+          echo "🌐 URL: https://testapp.mpencil.in"

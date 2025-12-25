@@ -1,89 +1,52 @@
 #!/bin/bash
-# ============================================================================
-# EC2 BOOTSTRAP SCRIPT - AMAZON LINUX 2023
-# ============================================================================
-set -e
-exec > >(tee /var/log/user-data.log)
-exec 2>&1
-echo "🚀 Starting EC2 Bootstrap"
-# ----------------------------
-# Detect region
-# ----------------------------
-REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
-echo "Region: $REGION"
-# ----------------------------
-# System update
-# ----------------------------
+# Bootstrap script for Next.js SSR application on Amazon Linux 2023
+# Paste this in EC2 User Data section during instance creation
+
+set -e  # Exit if any command fails
+
+# Update system packages
 dnf update -y
-# ----------------------------
-# Install Node.js 20
-# ----------------------------
+
+# Install Node.js 20 (required for Next.js)
 curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
 dnf install -y nodejs
-# ----------------------------
-# Install PM2
-# ----------------------------
+
+# Install PM2 (keeps your Next.js app running 24/7)
 npm install -g pm2
-# ----------------------------
-# Install Nginx
-# ----------------------------
+
+# Install Nginx (handles domain and HTTPS)
 dnf install -y nginx
-systemctl enable nginx
+systemctl enable nginx  # Start on boot
 systemctl start nginx
-# ----------------------------
-# App directories
-# ----------------------------
+
+# Create directory for Next.js app
 mkdir -p /var/www/nextjs-app/logs
 chown -R ec2-user:ec2-user /var/www/nextjs-app
-# ----------------------------
-# NOTE: Environment variables will be fetched during deployment
-# via GitHub Actions using fetch-ssm-env.sh script
-# ----------------------------
-echo "⏭️  Skipping SSM parameter fetch - will be handled by GitHub Actions"
-# ----------------------------
-# Nginx config
-# ----------------------------
-cat > /etc/nginx/conf.d/nextjs-app.conf << 'NGINX'
+
+# Configure Nginx to forward traffic to Next.js (port 3000)
+cat > /etc/nginx/conf.d/nextjs-app.conf << 'EOF'
 server {
     listen 80;
     server_name testapp.mpencil.in;
+    
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
     }
 }
-NGINX
+EOF
+
+# Test config and restart Nginx
 nginx -t && systemctl restart nginx
-# ----------------------------
-# PM2 config
-# ----------------------------
-cat > /var/www/nextjs-app/ecosystem.config.js << 'PM2'
-module.exports = {
-  apps: [{
-    name: 'nextjs-app',
-    script: 'npm',
-    args: 'start',
-    cwd: '/var/www/nextjs-app',
-    env_file: '/var/www/nextjs-app/.env.production',
-    autorestart: true,
-    watch: false
-  }]
-}
-PM2
-chown ec2-user:ec2-user /var/www/nextjs-app/ecosystem.config.js
-# Enable PM2 on boot
+
+# Make PM2 start automatically on server reboot
 env PATH=$PATH:/usr/bin /usr/local/lib/node_modules/pm2/bin/pm2 startup systemd -u ec2-user --hp /home/ec2-user
-# Allow Nginx → Node
+
+# Allow Nginx to connect to Node.js (Amazon Linux security)
 setsebool -P httpd_can_network_connect 1
-echo "✅ Bootstrap completed"
-echo ""
-echo "Next steps:"
-echo "  1. Deploy application via GitHub Actions"
-echo "  2. GitHub Actions will fetch SSM parameters and create .env.production"
-echo "  3. Application will start automatically with PM2"
+
+echo "✅ Bootstrap completed! Ready for Next.js SSR deployment."

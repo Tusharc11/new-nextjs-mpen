@@ -5,82 +5,41 @@
 set -e
 exec > >(tee /var/log/user-data.log)
 exec 2>&1
-
 echo "🚀 Starting EC2 Bootstrap"
-
 # ----------------------------
 # Detect region
 # ----------------------------
 REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
 echo "Region: $REGION"
-
 # ----------------------------
 # System update
 # ----------------------------
 dnf update -y
-
 # ----------------------------
 # Install Node.js 20
 # ----------------------------
 curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
 dnf install -y nodejs
-
 # ----------------------------
 # Install PM2
 # ----------------------------
 npm install -g pm2
-
 # ----------------------------
 # Install Nginx
 # ----------------------------
 dnf install -y nginx
 systemctl enable nginx
 systemctl start nginx
-
 # ----------------------------
 # App directories
 # ----------------------------
 mkdir -p /var/www/nextjs-app/logs
 chown -R ec2-user:ec2-user /var/www/nextjs-app
-
 # ----------------------------
-# Fetch ENV from SSM
+# NOTE: Environment variables will be fetched during deployment
+# via GitHub Actions using fetch-ssm-env.sh script
 # ----------------------------
-echo "Fetching environment variables from SSM"
-
-SSM_BASE="/mpencil-app/test"
-
-get_ssm_param() {
-  aws ssm get-parameter \
-    --name "$1" \
-    --with-decryption \
-    --region "$REGION" \
-    --query 'Parameter.Value' \
-    --output text
-}
-
-cat > /var/www/nextjs-app/.env.production << EOF
-NODE_ENV=production
-PORT=3000
-
-# Database
-MONGODB_URI=$(get_ssm_param "$SSM_BASE/MONGODB_URI")
-
-# Auth
-JWT_SECRET=$(get_ssm_param "$SSM_BASE/JWT_SECRET")
-
-# S3
-S3_REGION=$(get_ssm_param "$SSM_BASE/S3_REGION")
-S3_ACCESS_KEY_ID=$(get_ssm_param "$SSM_BASE/S3_ACCESS_KEY_ID")
-S3_SECRET_ACCESS_KEY=$(get_ssm_param "$SSM_BASE/S3_SECRET_ACCESS_KEY")
-S3_BUCKET_NAME=$(get_ssm_param "$SSM_BASE/S3_BUCKET_NAME")
-EOF
-
-chmod 600 /var/www/nextjs-app/.env.production
-chown ec2-user:ec2-user /var/www/nextjs-app/.env.production
-
-echo "SSM env vars written to .env.production"
-
+echo "⏭️  Skipping SSM parameter fetch - will be handled by GitHub Actions"
 # ----------------------------
 # Nginx config
 # ----------------------------
@@ -88,7 +47,6 @@ cat > /etc/nginx/conf.d/nextjs-app.conf << 'NGINX'
 server {
     listen 80;
     server_name testapp.mpencil.in;
-
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
@@ -101,9 +59,7 @@ server {
     }
 }
 NGINX
-
 nginx -t && systemctl restart nginx
-
 # ----------------------------
 # PM2 config
 # ----------------------------
@@ -120,13 +76,14 @@ module.exports = {
   }]
 }
 PM2
-
 chown ec2-user:ec2-user /var/www/nextjs-app/ecosystem.config.js
-
 # Enable PM2 on boot
 env PATH=$PATH:/usr/bin /usr/local/lib/node_modules/pm2/bin/pm2 startup systemd -u ec2-user --hp /home/ec2-user
-
 # Allow Nginx → Node
 setsebool -P httpd_can_network_connect 1
-
 echo "✅ Bootstrap completed"
+echo ""
+echo "Next steps:"
+echo "  1. Deploy application via GitHub Actions"
+echo "  2. GitHub Actions will fetch SSM parameters and create .env.production"
+echo "  3. Application will start automatically with PM2"

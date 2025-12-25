@@ -30,32 +30,3 @@ done
 
 chmod 600 "$ENV_FILE"
 echo "✅ Environment file created at $ENV_FILE"
-```
-
-## What Changes with Your SSM Path
-
-**Your SSM structure:**
-```
-/mpencil-app/test/
-├── MONGODB_URI
-├── JWT_SECRET
-├── S3_REGION
-├── S3_ACCESS_KEY_ID
-├── S3_SECRET_ACCESS_KEY
-└── S3_BUCKET_NAME
-```
-
-**Script automatically:**
-1. Finds ALL 6 parameters
-2. Removes `/mpencil-app/test/` prefix
-3. Keeps the parameter name as-is
-4. Creates `.env` with these exact names
-
-**Result in `.env.production`:**
-```
-MONGODB_URI=...
-JWT_SECRET=...
-S3_REGION=...
-S3_ACCESS_KEY_ID=...
-S3_SECRET_ACCESS_KEY=...
-S3_BUCKET_NAME=...

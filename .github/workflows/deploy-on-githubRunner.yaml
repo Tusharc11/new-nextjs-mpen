@@ -86,4 +86,207 @@ jobs:
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
-          userna
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "deploy.tar.gz"
+          target: "/tmp/"
+
+      - name: Deploy on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 15m
+          script: |
+            set -e
+            
+            echo "=========================================="
+            echo "Deploying to EC2 (Amazon Linux 2)"
+            echo "=========================================="
+            
+            # Stop PM2 app gracefully
+            echo "Stopping application..."
+            pm2 stop nextjs-app 2>/dev/null || echo "App not running"
+            
+            # Backup current version
+            echo "Creating backup..."
+            if [ -d "${{ env.APP_DIR }}/current" ]; then
+              sudo mv ${{ env.APP_DIR }}/current ${{ env.APP_DIR }}/backup-$(date +%Y%m%d_%H%M%S)
+              # Keep only last 3 backups
+              cd ${{ env.APP_DIR }}
+              sudo ls -dt backup-* 2>/dev/null | tail -n +4 | xargs sudo rm -rf || true
+            fi
+            
+            # Create current directory
+            sudo mkdir -p ${{ env.APP_DIR }}/current
+            
+            # Extract new deployment
+            echo "Extracting deployment package..."
+            sudo tar -xzf /tmp/deploy.tar.gz -C ${{ env.APP_DIR }}/current
+            sudo rm /tmp/deploy.tar.gz
+            
+            # Fix permissions
+            sudo chown -R ec2-user:ec2-user ${{ env.APP_DIR }}/current
+            
+            # Navigate to app directory
+            cd ${{ env.APP_DIR }}/current
+            
+            # Make SSM script executable (now in root of current/)
+            chmod +x fetch-ssm-env.sh
+            
+            # Fetch environment variables from AWS SSM
+            echo "Fetching environment from SSM..."
+            SSM_PATH="${{ env.SSM_PATH }}" \
+            ENV_FILE="${{ env.APP_DIR }}/current/.env.production" \
+            ./fetch-ssm-env.sh
+            
+            # Verify .env was created
+            if [ ! -f ".env.production" ]; then
+              echo "ERROR: .env.production not created"
+              echo "Checking SSM script output..."
+              ls -la
+              exit 1
+            fi
+            
+            echo "Environment variables loaded"
+            
+            # Install production dependencies only
+            echo "Installing production dependencies..."
+            npm ci --omit=dev --prefer-offline --no-audit
+            
+            # Update PM2 ecosystem config path if needed
+            cd ${{ env.APP_DIR }}
+            
+            # Check if ecosystem.config.js exists in current/
+            if [ ! -f "current/ecosystem.config.js" ]; then
+              echo "ecosystem.config.js not found in deployment, using existing one"
+              if [ ! -f "ecosystem.config.js" ]; then
+                echo "ERROR: No ecosystem.config.js found"
+                exit 1
+              fi
+            else
+              # Use the one from deployment
+              cp current/ecosystem.config.js ecosystem.config.js
+            fi
+            
+            # Reload or start app with PM2
+            echo "Starting application..."
+            if pm2 describe nextjs-app > /dev/null 2>&1; then
+              # App exists, reload it (zero downtime)
+              pm2 reload ecosystem.config.js --update-env
+              echo "App reloaded (zero downtime)"
+            else
+              # First time, start it
+              pm2 start ecosystem.config.js
+              echo "App started"
+            fi
+            
+            # Save PM2 configuration
+            pm2 save
+            
+            # Health check
+            echo "Running health check..."
+            sleep 5
+            
+            if pm2 describe nextjs-app | grep -q "online"; then
+              echo "=========================================="
+              echo "Deployment Successful!"
+              echo "=========================================="
+              pm2 status
+              pm2 info nextjs-app
+            else
+              echo "=========================================="
+              echo "Deployment Failed"
+              echo "=========================================="
+              pm2 logs nextjs-app --lines 50 --nostream
+              exit 1
+            fi
+
+      # ================================================================
+      # PHASE 3: VERIFICATION
+      # ================================================================
+      
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo "=========================================="
+          echo "Deployment Completed Successfully!"
+          echo "=========================================="
+          echo ""
+          echo "Application URL: https://testapp.mpencil.in"
+          echo "Deployed at: $(date)"
+          echo ""
+          echo "Next steps:"
+          echo "  1. Visit your application URL"
+          echo "  2. Check PM2 logs: ssh ec2-user@${{ secrets.EC2_HOST }} 'pm2 logs'"
+          echo "  3. Monitor: ssh ec2-user@${{ secrets.EC2_HOST }} 'pm2 monit'"
+
+      - name: Deployment Failed
+        if: failure()
+        run: |
+          echo "=========================================="
+          echo "Deployment Failed"
+          echo "=========================================="
+          echo ""
+          echo "Troubleshooting steps:"
+          echo "  1. Check EC2 logs: ssh ec2-user@${{ secrets.EC2_HOST }} 'pm2 logs'"
+          echo "  2. Check SSM parameters exist: aws ssm get-parameters-by-path --path /mpencil-app/test"
+          echo "  3. Verify EC2 IAM role has SSM permissions"
+          echo "  4. Check GitHub Actions logs above for details"
+```
+
+---
+
+## GitHub Secrets Required
+
+**Repository → Settings → Secrets and variables → Actions → Secrets**
+
+### 1. EC2_HOST
+```
+Name: EC2_HOST
+Value: Your EC2 address
+
+Options:
+- Elastic IP (recommended): 54.123.45.67
+- Public DNS: ec2-54-123-45-67.compute-1.amazonaws.com
+- Custom domain: testapp.mpencil.in
+```
+
+### 2. EC2_SSH_KEY
+```
+Name: EC2_SSH_KEY
+Value: [Entire .pem file content]
+
+Get content:
+cat your-key.pem
+
+Should look like:
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEA...
+(many lines)
+...
+-----END RSA PRIVATE KEY-----
+```
+
+---
+
+## GitHub Variables (Optional)
+
+**Repository → Settings → Secrets and variables → Actions → Variables**
+
+These are already defined in the YAML `env:` section, but you can override them:
+
+### Optional Variables:
+```
+Name: NODE_VERSION
+Value: 20
+
+Name: APP_DIR
+Value: /var/www/nextjs-app
+
+Name: SSM_PATH
+Value: /mpencil-app/test
+
+Name: AWS_REGION
+Value: us-east-1

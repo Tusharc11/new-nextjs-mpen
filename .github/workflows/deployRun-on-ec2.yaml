@@ -1,0 +1,159 @@
+name: Deploy to EC2 (Option B - Build on EC2)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:  # Manual trigger
+
+env:
+  APP_DIR: /var/www/nextjs-app
+  SSM_PATH: /mpencil-app/test
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  # Just for SSH operations
+    
+    steps:
+      # ================================================================
+      # PHASE 1: PACKAGE SOURCE CODE (GitHub)
+      # ================================================================
+      
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 📦 Create Source Package
+        run: |
+          echo "Creating source code package..."
+          
+          # Create tarball of source code (no build, no node_modules)
+          tar -czf source.tar.gz \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='.next' \
+            --exclude='.env*' \
+            --exclude='*.log' \
+            .
+          
+          echo "✅ Package created: $(du -h source.tar.gz | cut -f1)"
+
+      # ================================================================
+      # PHASE 2: UPLOAD TO EC2
+      # ================================================================
+      
+      - name: 🚀 Upload to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "source.tar.gz"
+          target: "/tmp/"
+
+      # ================================================================
+      # PHASE 3: BUILD & DEPLOY ON EC2
+      # ================================================================
+      
+      - name: 🔧 Build and Deploy on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 20m  # Building takes longer
+          script: |
+            set -e
+            
+            echo "=========================================="
+            echo "🚀 Build & Deploy on EC2 (Amazon Linux 2)"
+            echo "=========================================="
+            
+            # Stop app
+            echo "⏸️  Stopping application..."
+            pm2 stop nextjs-app 2>/dev/null || echo "App not running"
+            
+            # Backup
+            echo "💾 Creating backup..."
+            if [ -d "${{ env.APP_DIR }}/current" ]; then
+              sudo mv ${{ env.APP_DIR }}/current ${{ env.APP_DIR }}/backup-$(date +%Y%m%d_%H%M%S)
+              cd ${{ env.APP_DIR }}
+              sudo ls -dt backup-* 2>/dev/null | tail -n +4 | xargs sudo rm -rf || true
+            fi
+            
+            # Extract source
+            echo "📦 Extracting source code..."
+            sudo mkdir -p ${{ env.APP_DIR }}/current
+            sudo tar -xzf /tmp/source.tar.gz -C ${{ env.APP_DIR }}/current
+            sudo rm /tmp/source.tar.gz
+            sudo chown -R ec2-user:ec2-user ${{ env.APP_DIR }}/current
+            
+            cd ${{ env.APP_DIR }}/current
+            
+            # Fetch environment from SSM
+            echo "🔐 Fetching environment from SSM..."
+            chmod +x scripts/fetch-ssm-env.sh
+            SSM_PATH="${{ env.SSM_PATH }}" \
+            ENV_FILE="${{ env.APP_DIR }}/current/.env.production" \
+            ./scripts/fetch-ssm-env.sh
+            
+            if [ ! -f ".env.production" ]; then
+              echo "❌ ERROR: .env.production not created"
+              exit 1
+            fi
+            
+            # Install ALL dependencies (including dev for building)
+            echo "📚 Installing dependencies..."
+            npm ci
+            
+            # Build Next.js on EC2
+            echo "🏗️  Building Next.js application on EC2..."
+            NODE_ENV=production npm run build
+            
+            if [ ! -d ".next" ]; then
+              echo "❌ ERROR: Build failed, .next folder not created"
+              exit 1
+            fi
+            
+            echo "✅ Build completed successfully"
+            
+            # Remove dev dependencies to save space
+            echo "🧹 Removing dev dependencies..."
+            npm prune --production
+            
+            # Start with PM2
+            echo "▶️  Starting application..."
+            cd ${{ env.APP_DIR }}
+            
+            if pm2 describe nextjs-app > /dev/null 2>&1; then
+              pm2 reload ecosystem.config.js --update-env
+              echo "✅ App reloaded"
+            else
+              pm2 start ecosystem.config.js
+              echo "✅ App started"
+            fi
+            
+            pm2 save
+            
+            # Health check
+            echo "🏥 Health check..."
+            sleep 5
+            
+            if pm2 describe nextjs-app | grep -q "online"; then
+              echo "=========================================="
+              echo "✅ Deployment Successful!"
+              echo "=========================================="
+              pm2 status
+            else
+              echo "=========================================="
+              echo "❌ Deployment Failed"
+              echo "=========================================="
+              pm2 logs nextjs-app --lines 50 --nostream
+              exit 1
+            fi
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "✅ Deployment completed!"
+          echo "🌐 URL: https://testapp.mpencil.in"

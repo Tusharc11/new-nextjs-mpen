@@ -1,6 +1,3 @@
-[ec2-user@ip-172-31-12-169 ~]$ aws ssm get-parameters-by-path --path "/mpencil-app/test" --region ap-south-1
-
-An error occurred (AccessDeniedException) when calling the GetParametersByPath operation: User: arn:aws:sts::697016550265:assumed-role/mpencil-app-role/i-0edb73bfe051af041 is not authorized to perform: ssm:GetParametersByPath on resource: arn:aws:ssm:ap-south-1:697016550265:parameter/mpencil-app/test because no identity-based policy allows the ssm:GetParametersByPath action
 {
     "Version": "2012-10-17",
     "Statement": [
@@ -10,9 +7,13 @@ An error occurred (AccessDeniedException) when calling the GetParametersByPath o
             "Action": [
                 "ssm:GetParameter",
                 "ssm:GetParameters",
-                "ssm:GetParametersByPath"
+                "ssm:GetParametersByPath",
+                "ssm:DescribeParameters"
             ],
-            "Resource": "arn:aws:ssm:*:*:parameter/mpencil-app/test/*"
+            "Resource": [
+                "arn:aws:ssm:ap-south-1:697016550265:parameter/mpencil-app/test/*",
+                "arn:aws:ssm:ap-south-1:697016550265:parameter/mpencil-app/test"
+            ]
         },
         {
             "Sid": "KMSDecryptForSSM",
@@ -42,8 +43,8 @@ An error occurred (AccessDeniedException) when calling the GetParametersByPath o
                 "logs:DescribeLogStreams"
             ],
             "Resource": [
-                "arn:aws:logs:*:*:log-group:/aws/ec2/nextjs-app",
-                "arn:aws:logs:*:*:log-group:/aws/ec2/nextjs-app:*"
+                "arn:aws:logs:ap-south-1:697016550265:log-group:/aws/ec2/nextjs-app",
+                "arn:aws:logs:ap-south-1:697016550265:log-group:/aws/ec2/nextjs-app:*"
             ]
         },
         {

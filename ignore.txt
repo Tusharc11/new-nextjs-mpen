@@ -110,3 +110,36 @@ module.exports = {
 0|nextjs-a | 2025-12-26 20:24:58: 2025-12-26 20:24:58: 2025-12-26 20:24:58: 2025-12-26 20:24:58: 2025-12-26 20:24:59: 2025-12-26 20:24:59: 2025-12-26 20:24:59: 2025-12-26 20:24:59: 2025-12-26 20:25:00: 2025-12-26 20:25:00: 2025-12-26 20:25:00: 2025-12-26 20:25:00: 2025-12-26 20:25:01: 2025-12-26 20:25:01: 2025-12-26 20:25:01: 2025-12-26 20:25:01: 2025-12-26 20:36:14: 2025-12-26 20:36:15: 2025-12-26 20:36:15: 2025-12-26 20:36:15: 2025-12-26 20:36:15: 2025-12-26 20:36:16: 2025-12-26 20:36:16: 2025-12-26 20:36:16: 2025-12-26 20:36:16: 2025-12-26 20:36:17: 2025-12-26 20:36:17: 2025-12-26 20:36:17: 2025-12-26 20:36:17: 2025-12-26 20:36:17: 2025-12-26 20:36:18: 2025-12-26 20:36:18: 2025-12-26 20:40:35: 
 0|nextjs-a | > next-app@0.1.0 start
 0|nextjs-a | > next start
+=========================================================
+# 1. Clean npm cache
+npm cache clean --force
+rm -rf /home/ec2-user/.npm
+
+# 2. Remove old backups (keeping only the latest)
+cd /var/www/nextjs-app
+sudo rm -rf backup-*
+
+# 3. Clean old PM2 logs
+pm2 flush
+
+# 4. Remove system package cache
+sudo yum clean all
+
+# 5. Remove old kernels (if any)
+sudo package-cleanup --oldkernels --count=1
+
+# 6. Check space again
+df -h
+=================================================================
+# Find large files
+sudo du -h / 2>/dev/null | grep '[0-9\.]\+G' | sort -hr | head -20
+
+# Common culprits:
+# - Old logs
+sudo find /var/log -type f -name "*.log" -size +100M -delete
+
+# - Docker images (if you have any)
+docker system prune -a -f
+
+# - Temp files
+sudo rm -rf /tmp/*

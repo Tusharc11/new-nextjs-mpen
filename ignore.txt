@@ -1,60 +1,24 @@
+[ec2-user@ip-172-31-12-169 ~]$ aws ssm get-parameters-by-path --path "/mpencil-app/test/" --region ap-south-1
 {
-    "Version": "2012-10-17",
-    "Statement": [
+    "Parameters": [
         {
-            "Sid": "SSMParameterStoreRead",
-            "Effect": "Allow",
-            "Action": [
-                "ssm:GetParameter",
-                "ssm:GetParameters",
-                "ssm:GetParametersByPath",
-                "ssm:DescribeParameters"
-            ],
-            "Resource": [
-                "arn:aws:ssm:ap-south-1:697016550265:parameter/mpencil-app/test/*",
-                "arn:aws:ssm:ap-south-1:697016550265:parameter/mpencil-app/test"
-            ]
+            "Name": "/mpencil-app/test/JWT_SECRET",
+            "Type": "SecureString",
+            "Value": "AQICAHhNz7TyuymA2QiRp7w7bPA4DqiiBi3BQMvCXDX5t9zo7AF33yf6gQfIyErGASHDt6GzAAAAZDBiBgkqhkiG9w0BBwagVTBTAgEAME4GCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQM3c9irW+KDxq1vPNUAgEQgCHJMzIpBJYn5zwSuR8igcjLPrJlFK7TyYE7/gvswakWSvQ=",
+            "Version": 1,
+            "LastModifiedDate": "2025-12-25T12:02:01.267000+00:00",
+            "ARN": "arn:aws:ssm:ap-south-1:697016550265:parameter/mpencil-app/test/JWT_SECRET",
+            "DataType": "text"
         },
         {
-            "Sid": "KMSDecryptForSSM",
-            "Effect": "Allow",
-            "Action": "kms:Decrypt",
-            "Resource": "*"
+            "Name": "/mpencil-app/test/MONGODB_URI",
+            "Type": "SecureString",
+            "Value": "AQICAHhNz7TyuymA2QiRp7w7bPA4DqiiBi3BQMvCXDX5t9zo7AE2cO+fUqpXfJXroMtAZL1WAAAAszCBsAYJKoZIhvcNAQcGoIGiMIGfAgEAMIGZBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDAylGqvtAwdyvsXZTAIBEIBs5qMBXcG6ePFviEPyUBeo+b/sZ21DlQ+oGaJ3dNCN42k/+x8oszQsJWoIb9yTfhGaFHZnAo+I+L95yi0cJGvMoz+jREklRxwo7HyYoXEGn6VNbThVW7nap7bKrMwTjNm94KyKJUHW/Ak+VZ9r",
+            "Version": 1,
+            "LastModifiedDate": "2025-12-25T12:01:26.792000+00:00",
+            "ARN": "arn:aws:ssm:ap-south-1:697016550265:parameter/mpencil-app/test/MONGODB_URI",
+            "DataType": "text"
         },
         {
-            "Sid": "S3DeploymentAccess",
-            "Effect": "Allow",
-            "Action": [
-                "s3:GetObject",
-                "s3:ListBucket"
-            ],
-            "Resource": [
-                "arn:aws:s3:::your-deployment-bucket",
-                "arn:aws:s3:::your-deployment-bucket/*"
-            ]
-        },
-        {
-            "Sid": "CloudWatchLogsWrite",
-            "Effect": "Allow",
-            "Action": [
-                "logs:CreateLogGroup",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents",
-                "logs:DescribeLogStreams"
-            ],
-            "Resource": [
-                "arn:aws:logs:ap-south-1:697016550265:log-group:/aws/ec2/nextjs-app",
-                "arn:aws:logs:ap-south-1:697016550265:log-group:/aws/ec2/nextjs-app:*"
-            ]
-        },
-        {
-            "Sid": "EC2MetadataAccess",
-            "Effect": "Allow",
-            "Action": [
-                "ec2:DescribeTags",
-                "ec2:DescribeInstances"
-            ],
-            "Resource": "*"
-        }
-    ]
-}
+            "Name": "/mpencil-app/test/S3_ACCESS_KEY_ID",
+            "Type": "SecureString",

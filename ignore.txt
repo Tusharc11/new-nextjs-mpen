@@ -26,3 +26,69 @@ EOF
 
 chmod +x /tmp/test-ssm.sh
 /tmp/test-ssm.sh
+=================================================================
+
+Fetching from: /mpencil-app/test
+Region: ap-south-1
+Exit code: 254
+
+Result:
+
+An error occurred (AccessDeniedException) when calling the GetParametersByPath operation: User: arn:aws:sts::697016550265:assumed-role/mpencil-app-role/i-0edb73bfe051af041 is not authorized to perform: ssm:GetParametersByPath on resource: arn:aws:ssm:ap-south-1:697016550265:parameter/mpencil-app/test because no identity-based policy allows the ssm:GetParametersByPath action
+[ec2-user@ip-172-31-12-169 ~]$ vi /tmp/test-ssm.sh
+[ec2-user@ip-172-31-12-169 ~]$ /tmp/test-ssm.sh
+Fetching from: /mpencil-app/test/
+Region: ap-south-1
+Exit code: 0
+
+Result:
+{
+    "Parameters": [
+        {
+            "Name": "/mpencil-app/test/JWT_SECRET",
+            "Type": "SecureString",
+            "Value": "mayank",
+            "Version": 1,
+            "LastModifiedDate": "2025-12-25T12:02:01.267000+00:00",
+            "ARN": "arn:aws:ssm:ap-south-1:697016550265:parameter/mpencil-app/test/JWT_SECRET",
+            "DataType": "text"
+        },
+        {
+            "Name": "/mpencil-app/test/MONGODB_URI",
+            "Type": "SecureString",
+            "Value": "mongodb+srv://mayankgpt:kuX1zwfXl6eS4Hkt@video-dev.cn1xqa0.mongodb.net/padhai-dev",
+            "Version": 1,
+            "LastModifiedDate": "2025-12-25T12:01:26.792000+00:00",
+            "ARN": "arn:aws:ssm:ap-south-1:697016550265:parameter/mpencil-app/test/MONGODB_URI",
+            "DataType": "text"
+        },
+        {
+            "Name": "/mpencil-app/test/S3_ACCESS_KEY_ID",
+            "Type": "SecureString",
+            "Value": "AKIA2ESLMQN43QWTMQAR",
+            "Version": 1,
+            "LastModifiedDate": "2025-12-25T12:03:03.272000+00:00",
+            "ARN": "arn:aws:ssm:ap-south-1:697016550265:parameter/mpencil-app/test/S3_ACCESS_KEY_ID",
+            "DataType": "text"
+        },
+        {
+            "Name": "/mpencil-app/test/S3_BUCKET_NAME",
+            "Type": "String",
+            "Value": "mpencil-dev-bucket",
+            "Version": 1,
+            "LastModifiedDate": "2025-12-25T12:04:13.330000+00:00",
+            "ARN": "arn:aws:ssm:ap-south-1:697016550265:parameter/mpencil-app/test/S3_BUCKET_NAME",
+            "DataType": "text"
+        },
+        {
+            "Name": "/mpencil-app/test/S3_REGION",
+            "Type": "String",
+            "Value": "us-east-1",
+            "Version": 1,
+            "LastModifiedDate": "2025-12-25T12:02:33.662000+00:00",
+            "ARN": "arn:aws:ssm:ap-south-1:697016550265:parameter/mpencil-app/test/S3_REGION",
+            "DataType": "text"
+        },
+        {
+            "Name": "/mpencil-app/test/S3_SECRET_ACCESS_KEY",
+            "Type": "SecureString",

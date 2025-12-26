@@ -1,0 +1,60 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "SSMParameterStoreRead",
+            "Effect": "Allow",
+            "Action": [
+                "ssm:GetParameter",
+                "ssm:GetParameters",
+                "ssm:GetParametersByPath",
+                "ssm:DescribeParameters"
+            ],
+            "Resource": [
+                "arn:aws:ssm:ap-south-1:697016550265:parameter/mpencil-app/test/*",
+                "arn:aws:ssm:ap-south-1:697016550265:parameter/mpencil-app/test"
+            ]
+        },
+        {
+            "Sid": "KMSDecryptForSSM",
+            "Effect": "Allow",
+            "Action": "kms:Decrypt",
+            "Resource": "*"
+        },
+        {
+            "Sid": "S3DeploymentAccess",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::your-deployment-bucket",
+                "arn:aws:s3:::your-deployment-bucket/*"
+            ]
+        },
+        {
+            "Sid": "CloudWatchLogsWrite",
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "logs:DescribeLogStreams"
+            ],
+            "Resource": [
+                "arn:aws:logs:ap-south-1:697016550265:log-group:/aws/ec2/nextjs-app",
+                "arn:aws:logs:ap-south-1:697016550265:log-group:/aws/ec2/nextjs-app:*"
+            ]
+        },
+        {
+            "Sid": "EC2MetadataAccess",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DescribeTags",
+                "ec2:DescribeInstances"
+            ],
+            "Resource": "*"
+        }
+    ]
+}

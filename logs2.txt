@@ -1,21 +1,20 @@
-ubuntu@ip-172-31-0-150:~$ cd /var/www/nextjs-app/current/
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ cat .env.production | wc -l
-13
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ cat .env.production | grep -i api
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ ls
-DEPLOYMENT_INFO.json  ecosystem.config.js  fetch-ssm-env.sh  next.config.js  node_modules  package-lock.json  package.json  public
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ cat .env.production
-# Auto-generated from AWS SSM
-# Path: /mpencil-app/test/
-# Region: ap-south-1
-# Generated: Wed Jan 21 18:31:22 UTC 2026
+# Run this all-in-one command
+ssh ubuntu@your-ec2-ip << 'EOF'
+echo "=== 1. PM2 Status ==="
+pm2 status
 
-NODE_ENV=production
-PORT=3000
-JWT_SECRET=mayank
-MONGODB_URI=mongodb+srv://mayankgpt:kuX1zwfXl6eS4Hkt@video-dev.cn1xqa0.mongodb.net/padhai-dev
-S3_ACCESS_KEY_ID=AKQAR
-S3_BUCKET_NAME=mpencil-dev-bucket
-S3_REGION=us-east-1
-S3_SECRET_ACCESS_KEY=DlOPMQSiRx
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ 
+echo -e "\n=== 2. Is Port 3000 Listening? ==="
+sudo ss -tulpn | grep 3000
+
+echo -e "\n=== 3. Test Local Connection ==="
+curl -I http://localhost:3000/
+
+echo -e "\n=== 4. Can We Reach External API? ==="
+curl -I https://app.mpencil.io/ 2>&1 | head -5
+
+echo -e "\n=== 5. Recent Application Logs ==="
+pm2 logs nextjs-app --lines 30 --nostream 2>&1 | tail -30
+
+echo -e "\n=== 6. Nginx Status ==="
+sudo systemctl status nginx | head -3
+EOF

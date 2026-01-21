@@ -1,0 +1,21 @@
+ubuntu@ip-172-31-0-150:~$ cd /var/www/nextjs-app/current/
+ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ cat .env.production | wc -l
+13
+ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ cat .env.production | grep -i api
+ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ ls
+DEPLOYMENT_INFO.json  ecosystem.config.js  fetch-ssm-env.sh  next.config.js  node_modules  package-lock.json  package.json  public
+ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ cat .env.production
+# Auto-generated from AWS SSM
+# Path: /mpencil-app/test/
+# Region: ap-south-1
+# Generated: Wed Jan 21 18:31:22 UTC 2026
+
+NODE_ENV=production
+PORT=3000
+JWT_SECRET=mayank
+MONGODB_URI=mongodb+srv://mayankgpt:kuX1zwfXl6eS4Hkt@video-dev.cn1xqa0.mongodb.net/padhai-dev
+S3_ACCESS_KEY_ID=AKQAR
+S3_BUCKET_NAME=mpencil-dev-bucket
+S3_REGION=us-east-1
+S3_SECRET_ACCESS_KEY=DlOPMQSiRx
+ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ 

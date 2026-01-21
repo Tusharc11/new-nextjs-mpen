@@ -1,14 +1,89 @@
-# 1. Backup
-sudo cp /etc/nginx/sites-enabled/mpencil-app /etc/nginx/sites-enabled/mpencil-app.backup
+ubuntu@ip-172-31-0-150:/etc/nginx/sites-enabled$ sudo cp /etc/nginx/sites-enabled/mpencil-app /etc/nginx/sites-enabled/mpencil-app.backup
+ubuntu@ip-172-31-0-150:/etc/nginx/sites-enabled$ ls
+app-mpencil.save  mpencil-app  mpencil-app.backup  sapient-mpencil
+ubuntu@ip-172-31-0-150:/etc/nginx/sites-enabled$ sudo sed -i '/proxy_pass http:\/\/localhost:3000;/a\        \n        proxy_buffer_size 16k;\n        proxy_buffers 4 16k;\n        proxy_busy_buffers_size 32k;' /etc/nginx/sites-enabled/mpencil-app
+ubuntu@ip-172-31-0-150:/etc/nginx/sites-enabled$ ls
+app-mpencil.save  mpencil-app  mpencil-app.backup  sapient-mpencil
+ubuntu@ip-172-31-0-150:/etc/nginx/sites-enabled$ ls
+app-mpencil.save  mpencil-app  mpencil-app.backup  sapient-mpencil
+ubuntu@ip-172-31-0-150:/etc/nginx/sites-enabled$ ll
+total 20
+drwxr-xr-x 2 root root 4096 Jan 21 19:48 ./
+drwxr-xr-x 8 root root 4096 Dec 30 07:46 ../
+-rw------- 1 root root    1 Jan 21 19:34 app-mpencil.save
+-rw-r--r-- 1 root root 1564 Jan 21 19:48 mpencil-app
+-rw-r--r-- 1 root root 1458 Jan 21 19:47 mpencil-app.backup
+lrwxrwxrwx 1 root root   42 Dec 30 07:39 sapient-mpencil -> /etc/nginx/sites-available/sapient-mpencil
+ubuntu@ip-172-31-0-150:/etc/nginx/sites-enabled$ chmod +x mpencil-app
+chmod: changing permissions of 'mpencil-app': Operation not permitted
+ubuntu@ip-172-31-0-150:/etc/nginx/sites-enabled$ ll
+total 20
+drwxr-xr-x 2 root root 4096 Jan 21 19:48 ./
+drwxr-xr-x 8 root root 4096 Dec 30 07:46 ../
+-rw------- 1 root root    1 Jan 21 19:34 app-mpencil.save
+-rw-r--r-- 1 root root 1564 Jan 21 19:48 mpencil-app
+-rw-r--r-- 1 root root 1458 Jan 21 19:47 mpencil-app.backup
+lrwxrwxrwx 1 root root   42 Dec 30 07:39 sapient-mpencil -> /etc/nginx/sites-available/sapient-mpencil
+ubuntu@ip-172-31-0-150:/etc/nginx/sites-enabled$ sudo chmod +x mpencil-app
+ubuntu@ip-172-31-0-150:/etc/nginx/sites-enabled$ ll
+total 20
+drwxr-xr-x 2 root root 4096 Jan 21 19:48 ./
+drwxr-xr-x 8 root root 4096 Dec 30 07:46 ../
+-rw------- 1 root root    1 Jan 21 19:34 app-mpencil.save
+-rwxr-xr-x 1 root root 1564 Jan 21 19:48 mpencil-app*
+-rw-r--r-- 1 root root 1458 Jan 21 19:47 mpencil-app.backup
+lrwxrwxrwx 1 root root   42 Dec 30 07:39 sapient-mpencil -> /etc/nginx/sites-available/sapient-mpencil
+ubuntu@ip-172-31-0-150:/etc/nginx/sites-enabled$ cat mpencil-app
+# HTTP Server - Will redirect to HTTPS after SSL is set up
+server {
+    server_name app.mpencil.in;
 
-# 2. Add the buffer settings automatically
-sudo sed -i '/proxy_pass http:\/\/localhost:3000;/a\        \n        proxy_buffer_size 16k;\n        proxy_buffers 4 16k;\n        proxy_busy_buffers_size 32k;' /etc/nginx/sites-enabled/mpencil-app
+    # For now, allow HTTP (we'll add SSL next)
+    location / {
+        proxy_pass http://localhost:3000;
+        
+        proxy_buffer_size 16k;
+        proxy_buffers 4 16k;
+        proxy_busy_buffers_size 32k;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
 
-# 3. Test
-sudo nginx -t
+    # Increase max upload size for file uploads
+    client_max_body_size 50M;
 
-# 4. If test passes, reload
-sudo systemctl reload nginx
+    listen [::]:443 ssl ipv6only=on; # managed by Certbot
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/app.mpencil.in/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/app.mpencil.in/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
 
-# 5. Verify
-sudo tail -20 /var/log/nginx/error.log
+}
+
+server {
+    if ($host = app.mpencil.in) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80;
+    listen [::]:80;
+    server_name app.mpencil.in;
+    return 404; # managed by Certbot
+
+
+}ubuntu@ip-172-31-0-150:/etc/nginx/sites-enabled$ sudo nginx -t
+2026/01/21 19:50:24 [emerg] 500823#500823: duplicate listen options for [::]:443 in /etc/nginx/sites-enabled/mpencil-app.backup:26
+nginx: configuration file /etc/nginx/nginx.conf test failed

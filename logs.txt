@@ -1,118 +1,24 @@
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ env
-SHELL=/bin/bash
-PWD=/var/www/nextjs-app/current
-LOGNAME=ubuntu
-XDG_SESSION_TYPE=tty
-HOME=/home/ubuntu
-LANG=C.UTF-8
-LS_COLORS=rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:
-SSH_CONNECTION=13.233.177.3 32364 172.31.0.150 22
-LESSCLOSE=/usr/bin/lesspipe %s %s
-XDG_SESSION_CLASS=user
-TERM=xterm
-LESSOPEN=| /usr/bin/lesspipe %s
-USER=ubuntu
-SHLVL=1
-XDG_SESSION_ID=240
-XDG_RUNTIME_DIR=/run/user/1000
-SSH_CLIENT=13.233.177.3 32364 22
-XDG_DATA_DIRS=/usr/local/share:/usr/share:/var/lib/snapd/desktop
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
-DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
-SSH_TTY=/dev/pts/0
-_=/usr/bin/env
-OLDPWD=/home/ubuntu/test
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ NODE_ENV=production
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ NODE_ENV=production PORT=3000 npm start
-
-> next-app@0.1.0 start
-> next start
-
-   ▲ Next.js 16.0.7
-   - Local:         http://localhost:3000
-   - Network:       http://172.31.0.150:3000
-
- ✓ Starting...
- ⚠ `eslint` configuration in next.config.js is no longer supported. See more info here: https://nextjs.org/docs/app/api-reference/cli/next#next-lint-options
- ⚠ Invalid next.config.js options detected: 
- ⚠     Unrecognized key(s) in object: 'eslint'
- ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
- ✓ Ready in 508ms
-(node:456814) [MONGOOSE] Warning: Duplicate schema index on {"fileName":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
-(Use `node --trace-warnings ...` to show where the warning was created)
-
-
-===============================================
-// ecosystem.config.js
-// PM2 configuration for Next.js application
-module.exports = {
-  apps: [{
-    name: 'nextjs-app',
-    script: 'npm',
-    args: 'start',
-    cwd: '/var/www/nextjs-app/current',  // ← FIXED: Added /current
-    instances: 1,
-    autorestart: true,
-    watch: false,
-    max_memory_restart: '1G',
-    env_file: '/var/www/nextjs-app/current/.env.production',  // ← FIXED: Added /current
-    error_file: '/var/www/nextjs-app/logs/err.log',
-    out_file: '/var/www/nextjs-app/logs/out.log',
-    log_date_format: 'YYYY-MM-DD HH:mm:ss',
-    merge_logs: true,
-    kill_timeout: 5000,
-    listen_timeout: 3000,
-  }]
-};
-==============================================================
-# You pressed Ctrl+C and stopped the app
-# Now let's start it properly with PM2
-
-# 1. Stop and clear PM2
-pm2 stop all
-pm2 delete all
-pm2 kill
-
-# 2. Go to app directory
-cd /var/www/nextjs-app
-
-# 3. Create optimized PM2 config
-cat > ecosystem.config.js << 'EOF'
-module.exports = {
-  apps: [{
-    name: 'nextjs-app',
-    script: 'node_modules/next/dist/bin/next',
-    args: 'start',
-    cwd: '/var/www/nextjs-app/current',
-    instances: 1,
-    exec_mode: 'cluster',
-    autorestart: true,
-    watch: false,
-    max_memory_restart: '1G',
-    min_uptime: '10s',
-    max_restarts: 10,
-    restart_delay: 4000,
-    env: {
-      NODE_ENV: 'production',
-      PORT: 3000,
-    },
-    env_file: '/var/www/nextjs-app/current/.env.production',
-    error_file: '/var/www/nextjs-app/logs/err.log',
-    out_file: '/var/www/nextjs-app/logs/out.log',
-    log_date_format: 'YYYY-MM-DD HH:mm:ss',
-    merge_logs: true,
-    time: true,
-    kill_timeout: 5000,
-    listen_timeout: 10000,
-  }]
-};
-EOF
-
-# 4. Start with new config
-pm2 start ecosystem.config.js
-
-# 5. Save config
-pm2 save
-
-# 6. Check status
-pm2 status
+npm error code EUSAGE
+npm error
+npm error The `npm ci` command can only install with an existing package-lock.json or
+npm error npm-shrinkwrap.json with lockfileVersion >= 1. Run an install with npm@5 or
+npm error later to generate a package-lock.json file, then try again.
+npm error
+npm error Clean install a project
+npm error
+npm error Usage:
+npm error npm ci
+npm error
+npm error Options:
+npm error [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
+npm error [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+npm error [--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+npm error [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]
+npm error [--no-bin-links] [--no-fund] [--dry-run]
+npm error [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+npm error [-ws|--workspaces] [--include-workspace-root] [--install-links]
+npm error
+npm error aliases: clean-install, ic, install-clean, isntall-clean
+npm error
+npm error Run "npm help ci" for more info
+npm error A complete log of this run can be found in: /home/ubuntu/.npm/_logs/2026-01-21T17_32_36_145Z-debug-0.log

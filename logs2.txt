@@ -1,125 +1,45 @@
-## 🎯 FOUND IT! The Real Problem!
+ubuntu@ip-172-31-0-150:/etc/nginx/sites-enabled$ sudo cat mpencil-app 
+# HTTP Server - Will redirect to HTTPS after SSL is set up
+server {
+    server_name app.mpencil.in;
 
-Perfect! Now I can see the exact issue:
+    # For now, allow HTTP (we'll add SSL next)
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
 
-```
-upstream sent too big header while reading response header from upstream
-```
+    # Increase max upload size for file uploads
+    client_max_body_size 50M;
 
-**This is a classic Nginx issue!** Your Next.js app is sending response headers that are too large for Nginx's default buffer size.
+    listen [::]:443 ssl ipv6only=on; # managed by Certbot
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/app.mpencil.in/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/app.mpencil.in/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
 
----
-
-## ⚡ THE FIX - Increase Nginx Buffer Size## 🎉 FOUND THE REAL PROBLEM!
-
-Your Nginx logs show the exact error:
-
-```
-upstream sent too big header while reading response header from upstream
-```
-
-**This has NOTHING to do with your deployment!** It's a Nginx configuration issue.
-
----
-
-## 🎯 What's Happening
-
-1. User visits `https://app.mpencil.in/dashboard`
-2. Next.js app returns large headers (probably session cookies, JWT tokens)
-3. Nginx's default buffer (8k) is too small for these headers
-4. Nginx returns **502 "upstream sent too big header"**
-
-**Your app is working perfectly!** Nginx just can't handle the header size.
-
----
-
-## ⚡ THE FIX (2 Minutes)
-
-### Step 1: Edit Nginx Config
-
-```bash
-sudo nano /etc/nginx/sites-enabled/app-mpencil
-```
-
-### Step 2: Find `location /` block and add these 3 lines:
-
-```nginx
-location / {
-    proxy_pass http://localhost:3000;
-    
-    # ADD THESE 3 LINES:
-    proxy_buffer_size 16k;
-    proxy_buffers 4 16k;
-    proxy_busy_buffers_size 32k;
-    
-    # ... rest of config
 }
-```
 
-### Step 3: Save and Reload
+server {
+    if ($host = app.mpencil.in) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
 
-```bash
-# Save (Ctrl+X, Y, Enter)
 
-# Test
-sudo nginx -t
-
-# Reload
-sudo systemctl reload nginx
-```
-
-### Step 4: Test
-
-```bash
-curl -I https://app.mpencil.in/api/announcement
-# Should return 200, not 502!
-```
-
----
-
-## 📊 Summary
-
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| 502 errors on API calls | Nginx buffer too small for response headers | Increase buffer size to 16k |
-| "upstream sent too big header" | Large cookies/session data | Add 3 lines to Nginx config |
-| Your deployment | ✅ **Working perfectly!** | No changes needed |
-| Your ecosystem.config.js | ✅ **Correct!** | No changes needed |
-
----
-
-## ✅ Complete Fix Command
-
-```bash
-# Quick fix - run this:
-sudo nano /etc/nginx/sites-enabled/app-mpencil
-
-# Add after "proxy_pass http://localhost:3000;":
-#   proxy_buffer_size 16k;
-#   proxy_buffers 4 16k;
-#   proxy_busy_buffers_size 32k;
-
-# Then:
-sudo nginx -t && sudo systemctl reload nginx
-```
-
----
-
-## 🎊 Your Deployment Was Successful!
-
-**Everything you changed worked correctly:**
-- ✅ Ecosystem config: Perfect
-- ✅ Deploy pipeline: Perfect
-- ✅ Application: Running great
-- ✅ PM2: Stable and online
-
-**The only issue:** Nginx buffer size (infrastructure config, not deployment)
-
-After this Nginx fix, no more 502 errors! 🚀
-
-The complete guide is in the file with examples and explanations!
-
-============
-ubuntu@ip-172-31-0-150:~$ cd /etc/nginx/sites-enabled/
-ubuntu@ip-172-31-0-150:/etc/nginx/sites-enabled$ ls
-app-mpencil.save  mpencil-app  sapient-mpencil
+    listen 80;
+    listen [::]:80;
+    server_name app.mpencil.in;
+    return 404; # managed by Certbot

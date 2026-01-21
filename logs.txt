@@ -1,3 +1,46 @@
+# 🔍 Complete Guide: CloudWatch Logs Setup for EC2 and Next.js Application
+
+This guide will help you set up CloudWatch Logs for both your EC2 server and Next.js application, with proper access for developers.
+
+---
+
+## 📋 Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [Phase 1: IAM Role Setup](#phase-1-iam-role-setup)
+3. [Phase 2: Install CloudWatch Agent on EC2](#phase-2-install-cloudwatch-agent-on-ec2)
+4. [Phase 3: Configure Application Logs](#phase-3-configure-application-logs)
+5. [Phase 4: Set Up Developer Access](#phase-4-set-up-developer-access)
+6. [Phase 5: View Logs in AWS Console](#phase-5-view-logs-in-aws-console)
+7. [Monitoring Dashboards](#monitoring-dashboards)
+8. [Troubleshooting](#troubleshooting)
+
+---
+
+## Prerequisites
+
+Before starting, ensure you have:
+- ✅ AWS Console access with admin permissions
+- ✅ EC2 instance running (your Ubuntu instance)
+- ✅ SSH access to EC2
+- ✅ Application deployed and running with PM2
+
+---
+
+## Phase 1: IAM Role Setup
+
+### **Step 1.1: Create IAM Policy for CloudWatch**
+
+1. **Open AWS Console** → Navigate to **IAM**
+   - URL: https://console.aws.amazon.com/iam/
+
+2. **Click "Policies"** in left sidebar
+
+3. **Click "Create Policy"**
+
+4. **Click "JSON" tab** and paste this policy:
+
+```json
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -23,3 +66,810 @@
     }
   ]
 }
+```
+
+5. **Click "Next: Tags"** (skip tags)
+
+6. **Click "Next: Review"**
+
+7. **Name the policy:**
+   - Policy name: `EC2-CloudWatch-Logs-Policy`
+   - Description: `Allows EC2 to send logs to CloudWatch`
+
+8. **Click "Create Policy"** ✅
+
+---
+
+### **Step 1.2: Create/Update IAM Role**
+
+#### **Option A: Create New IAM Role**
+
+1. **Go to IAM** → **Roles** → **Create Role**
+
+2. **Select trusted entity:**
+   - Trusted entity type: **AWS service**
+   - Use case: **EC2**
+   - Click **Next**
+
+3. **Attach permissions:**
+   - Search and select: `EC2-CloudWatch-Logs-Policy` (created above)
+   - Search and select: `CloudWatchAgentServerPolicy` (AWS managed)
+   - Click **Next**
+
+4. **Name the role:**
+   - Role name: `EC2-CloudWatch-Role`
+   - Description: `EC2 role for CloudWatch logging`
+   - Click **Create Role** ✅
+
+#### **Option B: Update Existing IAM Role**
+
+1. **Go to IAM** → **Roles**
+
+2. **Find your EC2's existing role**
+   - If you don't know the role name:
+     - Go to **EC2** → **Instances**
+     - Select your instance
+     - Click **Security** tab
+     - Note the **IAM role** name
+
+3. **Click on the role name**
+
+4. **Click "Attach policies"**
+
+5. **Search and select:**
+   - `EC2-CloudWatch-Logs-Policy`
+   - `CloudWatchAgentServerPolicy`
+
+6. **Click "Attach policies"** ✅
+
+---
+
+### **Step 1.3: Attach Role to EC2 Instance**
+
+1. **Go to EC2 Console** → **Instances**
+   - URL: https://console.aws.amazon.com/ec2/
+
+2. **Select your EC2 instance** (checkbox)
+
+3. **Click "Actions"** → **Security** → **Modify IAM role**
+
+4. **Select IAM role:**
+   - Choose: `EC2-CloudWatch-Role` (or your role name)
+
+5. **Click "Update IAM role"** ✅
+
+6. **Verify:**
+   - Select instance → **Security** tab
+   - Should show: IAM role: `EC2-CloudWatch-Role`
+
+---
+
+## Phase 2: Install CloudWatch Agent on EC2
+
+### **Step 2.1: SSH to EC2**
+
+```bash
+ssh ubuntu@your-ec2-ip
+```
+
+---
+
+### **Step 2.2: Download and Install CloudWatch Agent**
+
+```bash
+# Download CloudWatch Agent
+wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+
+# Install the agent
+sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
+
+# Verify installation
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -m ec2 -a query
+
+# Clean up
+rm amazon-cloudwatch-agent.deb
+```
+
+**Expected output:**
+```
+{
+  "status": "stopped",
+  "starttime": "",
+  "version": "1.x.x"
+}
+```
+
+---
+
+### **Step 2.3: Create CloudWatch Agent Configuration**
+
+Create the configuration file:
+
+```bash
+sudo nano /opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-config.json
+```
+
+Paste this configuration:
+
+```json
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "root"
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/www/nextjs-app/logs/out.log",
+            "log_group_name": "/aws/ec2/nextjs-app/application",
+            "log_stream_name": "{instance_id}/app-output",
+            "timezone": "UTC",
+            "timestamp_format": "%Y-%m-%dT%H:%M:%S"
+          },
+          {
+            "file_path": "/var/www/nextjs-app/logs/err.log",
+            "log_group_name": "/aws/ec2/nextjs-app/application",
+            "log_stream_name": "{instance_id}/app-errors",
+            "timezone": "UTC",
+            "timestamp_format": "%Y-%m-%dT%H:%M:%S"
+          },
+          {
+            "file_path": "/var/log/syslog",
+            "log_group_name": "/aws/ec2/system/syslog",
+            "log_stream_name": "{instance_id}/syslog",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/var/log/nginx/access.log",
+            "log_group_name": "/aws/ec2/nginx/access",
+            "log_stream_name": "{instance_id}/nginx-access",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/var/log/nginx/error.log",
+            "log_group_name": "/aws/ec2/nginx/error",
+            "log_stream_name": "{instance_id}/nginx-error",
+            "timezone": "UTC"
+          }
+        ]
+      }
+    }
+  },
+  "metrics": {
+    "namespace": "NextJsApp/EC2",
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          {
+            "name": "cpu_usage_idle",
+            "rename": "CPU_IDLE",
+            "unit": "Percent"
+          },
+          {
+            "name": "cpu_usage_iowait",
+            "rename": "CPU_IOWAIT",
+            "unit": "Percent"
+          }
+        ],
+        "metrics_collection_interval": 60,
+        "totalcpu": false
+      },
+      "disk": {
+        "measurement": [
+          {
+            "name": "used_percent",
+            "rename": "DISK_USED",
+            "unit": "Percent"
+          }
+        ],
+        "metrics_collection_interval": 60,
+        "resources": [
+          "*"
+        ]
+      },
+      "diskio": {
+        "measurement": [
+          {
+            "name": "io_time"
+          }
+        ],
+        "metrics_collection_interval": 60,
+        "resources": [
+          "*"
+        ]
+      },
+      "mem": {
+        "measurement": [
+          {
+            "name": "mem_used_percent",
+            "rename": "MEMORY_USED",
+            "unit": "Percent"
+          }
+        ],
+        "metrics_collection_interval": 60
+      }
+    }
+  }
+}
+```
+
+**Save and exit:**
+- Press `Ctrl+X`
+- Press `Y`
+- Press `Enter`
+
+---
+
+### **Step 2.4: Start CloudWatch Agent**
+
+```bash
+# Start the agent with the configuration
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config \
+  -m ec2 \
+  -s \
+  -c file:/opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-config.json
+
+# Verify it's running
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -m ec2 \
+  -a query
+```
+
+**Expected output:**
+```
+{
+  "status": "running",
+  "starttime": "2026-01-21T...",
+  "version": "1.x.x"
+}
+```
+
+---
+
+### **Step 2.5: Enable CloudWatch Agent to Start on Boot**
+
+```bash
+# Enable service
+sudo systemctl enable amazon-cloudwatch-agent
+
+# Check status
+sudo systemctl status amazon-cloudwatch-agent
+```
+
+---
+
+## Phase 3: Configure Application Logs
+
+### **Step 3.1: Update PM2 Logging Configuration**
+
+Update your `ecosystem.config.js` to ensure logs are properly formatted:
+
+```bash
+nano /var/www/nextjs-app/ecosystem.config.js
+```
+
+Ensure these settings are present:
+
+```javascript
+module.exports = {
+  apps: [{
+    name: 'nextjs-app',
+    script: 'npm',
+    args: 'start',
+    cwd: '/var/www/nextjs-app/current',
+    instances: 1,
+    exec_mode: 'cluster',
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G',
+    
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3000,
+    },
+    
+    env_file: '/var/www/nextjs-app/current/.env.production',
+    
+    // Logging configuration for CloudWatch
+    error_file: '/var/www/nextjs-app/logs/err.log',
+    out_file: '/var/www/nextjs-app/logs/out.log',
+    log_date_format: 'YYYY-MM-DDTHH:mm:ss',  // ISO format for CloudWatch
+    merge_logs: true,
+    time: true,
+    
+    // Log rotation
+    max_size: '50M',
+    max_files: 5,
+    
+    kill_timeout: 5000,
+    listen_timeout: 10000,
+  }]
+};
+```
+
+Restart PM2:
+
+```bash
+pm2 restart nextjs-app
+pm2 save
+```
+
+---
+
+### **Step 3.2: Set Up Log Rotation**
+
+```bash
+# Create log rotation config
+sudo nano /etc/logrotate.d/nextjs-app
+```
+
+Paste this configuration:
+
+```
+/var/www/nextjs-app/logs/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    create 0640 ubuntu ubuntu
+    sharedscripts
+    postrotate
+        pm2 reloadLogs
+    endscript
+}
+```
+
+Test log rotation:
+
+```bash
+sudo logrotate -f /etc/logrotate.d/nextjs-app
+```
+
+---
+
+## Phase 4: Set Up Developer Access
+
+### **Step 4.1: Create Developer IAM Policy**
+
+1. **Go to IAM** → **Policies** → **Create Policy**
+
+2. **Click JSON tab** and paste:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams",
+        "logs:GetLogEvents",
+        "logs:FilterLogEvents",
+        "logs:StartQuery",
+        "logs:StopQuery",
+        "logs:DescribeQueries",
+        "logs:GetQueryResults"
+      ],
+      "Resource": [
+        "arn:aws:logs:ap-south-1:*:log-group:/aws/ec2/nextjs-app*",
+        "arn:aws:logs:ap-south-1:*:log-group:/aws/ec2/system*",
+        "arn:aws:logs:ap-south-1:*:log-group:/aws/ec2/nginx*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:GetMetricStatistics",
+        "cloudwatch:ListMetrics",
+        "cloudwatch:GetMetricData"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+3. **Name it:** `Developer-CloudWatch-ReadOnly`
+
+4. **Click Create Policy** ✅
+
+---
+
+### **Step 4.2: Create Developer IAM Group**
+
+1. **Go to IAM** → **User Groups** → **Create Group**
+
+2. **Group name:** `Developers`
+
+3. **Attach policies:**
+   - Search and select: `Developer-CloudWatch-ReadOnly`
+   - Search and select: `CloudWatchReadOnlyAccess` (AWS managed)
+
+4. **Click Create Group** ✅
+
+---
+
+### **Step 4.3: Add Developers to Group**
+
+1. **Go to IAM** → **User Groups** → **Developers**
+
+2. **Click "Add users"**
+
+3. **Select developer IAM users**
+
+4. **Click "Add users"** ✅
+
+---
+
+### **Step 4.4: Alternative: Individual User Access**
+
+If you want to give access to specific developers:
+
+1. **Go to IAM** → **Users**
+
+2. **Select the developer user**
+
+3. **Click "Add permissions"** → **Attach policies directly**
+
+4. **Select:**
+   - `Developer-CloudWatch-ReadOnly`
+   - `CloudWatchReadOnlyAccess`
+
+5. **Click "Add permissions"** ✅
+
+---
+
+## Phase 5: View Logs in AWS Console
+
+### **Step 5.1: Access CloudWatch Logs**
+
+1. **Open CloudWatch Console**
+   - URL: https://console.aws.amazon.com/cloudwatch/
+
+2. **Click "Logs"** in left sidebar → **Log groups**
+
+3. **You should see:**
+   ```
+   /aws/ec2/nextjs-app/application
+   /aws/ec2/system/syslog
+   /aws/ec2/nginx/access
+   /aws/ec2/nginx/error
+   ```
+
+---
+
+### **Step 5.2: View Application Logs**
+
+1. **Click on log group:** `/aws/ec2/nextjs-app/application`
+
+2. **You'll see log streams:**
+   ```
+   i-xxxxxxxxx/app-output
+   i-xxxxxxxxx/app-errors
+   ```
+
+3. **Click on a log stream** to view logs
+
+4. **Filter logs:**
+   - Use the filter box at top
+   - Example: `error` or `500` or `failed`
+
+---
+
+### **Step 5.3: Use CloudWatch Logs Insights**
+
+**For powerful querying:**
+
+1. **Click "Logs Insights"** in left sidebar
+
+2. **Select log groups:**
+   - Check `/aws/ec2/nextjs-app/application`
+
+3. **Use query editor:**
+
+**Example Query 1: Find all errors in last hour**
+```
+fields @timestamp, @message
+| filter @message like /error|Error|ERROR/
+| sort @timestamp desc
+| limit 100
+```
+
+**Example Query 2: Count errors by type**
+```
+fields @message
+| filter @message like /error|Error|ERROR/
+| stats count() by @message
+| sort count() desc
+```
+
+**Example Query 3: Application startup logs**
+```
+fields @timestamp, @message
+| filter @message like /Ready on|Starting/
+| sort @timestamp desc
+```
+
+4. **Click "Run query"**
+
+5. **Save useful queries:**
+   - Click "Save"
+   - Name it (e.g., "Error Logs Last Hour")
+   - Can reuse later
+
+---
+
+### **Step 5.4: Set Up Log Filters and Alarms**
+
+**Create Metric Filter for Errors:**
+
+1. **Go to log group:** `/aws/ec2/nextjs-app/application`
+
+2. **Click "Create metric filter"**
+
+3. **Define pattern:**
+   - Filter pattern: `[time, request_id, level = ERROR*, ...]`
+   - Or simple: `ERROR`
+
+4. **Test pattern** with sample logs
+
+5. **Click "Next"**
+
+6. **Assign metric:**
+   - Filter name: `ApplicationErrors`
+   - Metric namespace: `NextJsApp`
+   - Metric name: `ErrorCount`
+   - Metric value: `1`
+
+7. **Click "Next"** → **Create metric filter**
+
+**Create Alarm:**
+
+1. **Click "Create alarm"** on the metric filter
+
+2. **Configure:**
+   - Threshold: Static
+   - Whenever ErrorCount is: Greater than `5`
+   - Period: 5 minutes
+
+3. **Click "Next"**
+
+4. **Configure SNS notification:**
+   - Create new topic: `nextjs-app-alerts`
+   - Email: `your-team@company.com`
+
+5. **Click "Create alarm"** ✅
+
+6. **Confirm subscription** in email
+
+---
+
+## Monitoring Dashboards
+
+### **Create CloudWatch Dashboard**
+
+1. **Go to CloudWatch** → **Dashboards** → **Create dashboard**
+
+2. **Dashboard name:** `NextJs-App-Monitoring`
+
+3. **Add widgets:**
+
+**Widget 1: Application Errors**
+- Widget type: **Number**
+- Metric: `NextJsApp` → `ErrorCount`
+- Statistic: Sum
+- Period: 5 minutes
+
+**Widget 2: Server CPU**
+- Widget type: **Line**
+- Metric: `NextJsApp/EC2` → `CPU_IDLE`
+- Statistic: Average
+
+**Widget 3: Memory Usage**
+- Widget type: **Line**
+- Metric: `NextJsApp/EC2` → `MEMORY_USED`
+- Statistic: Average
+
+**Widget 4: Disk Usage**
+- Widget type: **Gauge**
+- Metric: `NextJsApp/EC2` → `DISK_USED`
+- Statistic: Average
+
+**Widget 5: Recent Application Logs**
+- Widget type: **Logs**
+- Log groups: `/aws/ec2/nextjs-app/application`
+- Query:
+  ```
+  fields @timestamp, @message
+  | sort @timestamp desc
+  | limit 20
+  ```
+
+4. **Save dashboard** ✅
+
+---
+
+## Developer Access Instructions
+
+### **For Developers: How to Access Logs**
+
+**📧 Email to Developers:**
+
+```
+Subject: CloudWatch Logs Access for Next.js Application
+
+Hi Team,
+
+You now have access to application and server logs via AWS CloudWatch.
+
+🔗 Quick Access:
+1. Log in to AWS Console: https://console.aws.amazon.com/
+2. Go to CloudWatch: https://console.aws.amazon.com/cloudwatch/
+3. Click "Logs" → "Log groups"
+
+📁 Available Log Groups:
+- /aws/ec2/nextjs-app/application  → App logs (PM2 output and errors)
+- /aws/ec2/system/syslog           → System logs
+- /aws/ec2/nginx/access            → Nginx access logs
+- /aws/ec2/nginx/error             → Nginx error logs
+
+🔍 Quick Filters:
+- Application errors: Filter with "error" or "ERROR"
+- HTTP 500s: Filter with "500"
+- Startup logs: Filter with "Ready on" or "Starting"
+
+💡 Using Logs Insights:
+1. Click "Logs Insights" in sidebar
+2. Select log group
+3. Use sample queries (see below)
+
+📊 Dashboard:
+View real-time metrics: CloudWatch → Dashboards → NextJs-App-Monitoring
+
+Sample Queries:
+--------------
+# Find errors in last hour
+fields @timestamp, @message
+| filter @message like /error/i
+| sort @timestamp desc
+
+# Count requests by status
+fields @message
+| parse @message /HTTP\/\d+\.\d+"\s(?<status>\d{3})/
+| stats count() by status
+
+Questions? Contact DevOps team.
+```
+
+---
+
+## Troubleshooting
+
+### **Issue 1: CloudWatch Agent Not Sending Logs**
+
+**Check agent status:**
+```bash
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -m ec2 -a query
+```
+
+**Check agent logs:**
+```bash
+sudo tail -f /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+```
+
+**Restart agent:**
+```bash
+sudo systemctl restart amazon-cloudwatch-agent
+```
+
+---
+
+### **Issue 2: Log Groups Not Appearing**
+
+**Verify IAM role:**
+1. EC2 → Instance → Security tab
+2. Check IAM role attached
+3. Verify role has `CloudWatchAgentServerPolicy`
+
+**Check log file permissions:**
+```bash
+ls -la /var/www/nextjs-app/logs/
+# Should be readable by ubuntu user
+```
+
+---
+
+### **Issue 3: Developers Can't See Logs**
+
+**Verify permissions:**
+1. IAM → Users → Select user
+2. Check "Permissions" tab
+3. Should have `Developer-CloudWatch-ReadOnly` or `CloudWatchReadOnlyAccess`
+
+**Check log group ARNs** in policy match your region and account
+
+---
+
+### **Issue 4: Too Many Logs / High Costs**
+
+**Set retention policy:**
+1. CloudWatch → Log groups
+2. Select log group
+3. Actions → Edit retention setting
+4. Set to: **7 days** or **14 days**
+5. Click Save
+
+**Filter unnecessary logs:**
+```bash
+# Update PM2 log level in ecosystem.config.js
+log_type: 'json',
+```
+
+---
+
+## Cost Optimization
+
+### **Estimated Costs:**
+
+- **Log ingestion:** ~$0.50/GB
+- **Log storage:** ~$0.03/GB/month
+- **Log insights queries:** ~$0.005/GB scanned
+
+**Typical usage for 1 Next.js app:**
+- ~500 MB logs/day = **~$7.50/month**
+- With 7-day retention = **~$8/month total**
+
+### **Reduce Costs:**
+
+1. **Set log retention:** 7 days instead of indefinite
+2. **Filter logs:** Don't log debug messages in production
+3. **Use log levels:** Only log warnings and errors
+4. **Compress old logs:** Automatic with log rotation
+
+---
+
+## Summary Checklist
+
+- [ ] IAM role created and attached to EC2
+- [ ] CloudWatch Agent installed and running
+- [ ] Log groups visible in CloudWatch console
+- [ ] Application logs streaming to CloudWatch
+- [ ] Developer IAM policy created
+- [ ] Developers added to group or given individual access
+- [ ] Dashboard created for monitoring
+- [ ] Metric filters and alarms configured
+- [ ] Log retention policy set (7-14 days)
+- [ ] Developers notified with access instructions
+
+---
+
+## Quick Reference Commands
+
+```bash
+# Check CloudWatch Agent status
+sudo systemctl status amazon-cloudwatch-agent
+
+# View agent logs
+sudo tail -f /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+
+# Restart agent
+sudo systemctl restart amazon-cloudwatch-agent
+
+# View PM2 logs locally
+pm2 logs nextjs-app
+
+# Check log file sizes
+du -sh /var/www/nextjs-app/logs/*
+
+# Test log rotation
+sudo logrotate -f /etc/logrotate.d/nextjs-app
+```
+
+---
+
+You're all set! Your application and server logs are now streaming to CloudWatch, and developers can access them through the AWS Console. 🎉

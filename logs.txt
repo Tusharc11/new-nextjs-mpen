@@ -1,74 +1,35 @@
-Run `npm audit` for details.
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ ^C
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ ls -la node_modules/next/dist/bin/next
--rwxrwxr-x 1 ubuntu ubuntu 14721 Jan 21 17:39 node_modules/next/dist/bin/next
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ cd ..
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app$ pm2 delete all
-[PM2] Applying action deleteProcessId on app [all](ids: [ 0 ])
-[PM2] [all](0) ✓
-┌────┬───────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
-│ id │ name      │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
-└────┴───────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app$ pm2 start npm --name "nextjs-app" --start
+# Stop the broken process
+pm2 delete all
 
-  error: unknown option `--start'
+# Create the correct ecosystem.config.js
+cat > /var/www/nextjs-app/ecosystem.config.js << 'EOF'
+module.exports = {
+  apps: [{
+    name: 'nextjs-app',
+    script: 'npm',
+    args: 'start',
+    cwd: '/var/www/nextjs-app/current',
+    instances: 1,
+    autorestart: true,
+    max_memory_restart: '1G',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3000,
+    },
+    env_file: '/var/www/nextjs-app/current/.env.production',
+    error_file: '/var/www/nextjs-app/logs/err.log',
+    out_file: '/var/www/nextjs-app/logs/out.log',
+    log_date_format: 'YYYY-MM-DD HH:mm:ss',
+    merge_logs: true,
+  }]
+};
+EOF
 
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app$ pm2 start npm --name "nextjs-app" -- start
-[PM2] Starting /usr/bin/npm in fork_mode (1 instance)
-[PM2] Done.
-┌────┬───────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
-│ id │ name          │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
-├────┼───────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
-│ 0  │ nextjs-app    │ default     │ N/A     │ fork    │ 468806   │ 0s     │ 0    │ online    │ 0%       │ 18.4mb   │ ubuntu   │ disabled │
-└────┴───────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app$ pm2 save
-[PM2] Saving current process list...
-[PM2] Successfully saved in /home/ubuntu/.pm2/dump.pm2
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app$ pm2 status
-┌────┬───────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
-│ id │ name          │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
-├────┼───────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
-│ 0  │ nextjs-app    │ default     │ N/A     │ fork    │ 0        │ 0      │ 15   │ errored   │ 0%       │ 0b       │ ubuntu   │ disabled │
-└────┴───────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app$ pm2 status
-┌────┬───────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
-│ id │ name          │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
-├────┼───────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
-│ 0  │ nextjs-app    │ default     │ N/A     │ fork    │ 0        │ 0      │ 15   │ errored   │ 0%       │ 0b       │ ubuntu   │ disabled │
-└────┴───────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app$ pm2 status
-┌────┬───────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
-│ id │ name          │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
-├────┼───────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
-│ 0  │ nextjs-app    │ default     │ N/A     │ fork    │ 0        │ 0      │ 15   │ errored   │ 0%       │ 0b       │ ubuntu   │ disabled │
-└────┴───────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app$ pm2 status
-┌────┬───────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
-│ id │ name          │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
-├────┼───────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
-│ 0  │ nextjs-app    │ default     │ N/A     │ fork    │ 0        │ 0      │ 15   │ errored   │ 0%       │ 0b       │ ubuntu   │ disabled │
-└────┴───────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
-ubuntu@ip-172-31-0-150:/var/www/nextjs-app$ pm2 logs nextjs-app --lines 20
-[TAILING] Tailing last 20 lines for [nextjs-app] process (change the value with --lines option)
-/home/ubuntu/.pm2/logs/nextjs-app-out.log last 20 lines:
-/home/ubuntu/.pm2/logs/nextjs-app-error.log last 20 lines:
-0|nextjs-a | npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open '/var/www/nextjs-app/package.json'
-0|nextjs-a | npm error enoent This is related to npm not being able to find a file.
-0|nextjs-a | npm error enoent
-0|nextjs-a | npm error A complete log of this run can be found in: /home/ubuntu/.npm/_logs/2026-01-21T17_50_58_147Z-debug-0.log
-0|nextjs-a | npm error code ENOENT
-0|nextjs-a | npm error syscall open
-0|nextjs-a | npm error path /var/www/nextjs-app/package.json
-0|nextjs-a | npm error errno -2
-0|nextjs-a | npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open '/var/www/nextjs-app/package.json'
-0|nextjs-a | npm error enoent This is related to npm not being able to find a file.
-0|nextjs-a | npm error enoent
-0|nextjs-a | npm error A complete log of this run can be found in: /home/ubuntu/.npm/_logs/2026-01-21T17_50_58_389Z-debug-0.log
-0|nextjs-a | npm error code ENOENT
-0|nextjs-a | npm error syscall open
-0|nextjs-a | npm error path /var/www/nextjs-app/package.json
-0|nextjs-a | npm error errno -2
-0|nextjs-a | npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open '/var/www/nextjs-app/package.json'
-0|nextjs-a | npm error enoent This is related to npm not being able to find a file.
-0|nextjs-a | npm error enoent
-0|nextjs-a | npm error A complete log of this run can be found in: /home/ubuntu/.npm/_logs/2026-01-21T17_50_58_633Z-debug-0.log
+# Start with the config file
+pm2 start ecosystem.config.js
+
+# Save
+pm2 save
+
+# Check status
+pm2 status

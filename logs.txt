@@ -1,0 +1,279 @@
+ubuntu@ip-172-31-0-150:~/test$ ./ec2-health-check.sh 
+
+==========================================
+1. SYSTEM INFORMATION
+==========================================
+[INFO] Hostname: ip-172-31-0-150
+[INFO] OS: Ubuntu 24.04.3 LTS
+[INFO] Kernel: 6.14.0-1018-aws
+[INFO] Uptime: up 1 day, 6 hours, 10 minutes
+[INFO] Current User: ubuntu
+[INFO] Current Time: Wed Jan 21 16:55:05 UTC 2026
+
+==========================================
+2. SYSTEM RESOURCES
+==========================================
+CPU Usage:
+  CPU Usage: 17.4%
+
+Memory Usage:
+  Total: 1.9Gi
+  Used: 771Mi (40578.95%)
+  Free: 609Mi
+
+Disk Usage:
+  Total: 29G
+  Used: 24G (86%)
+  Available: 4.1G
+
+[INFO] Disk usage of app directory:
+4.6G    /var/www/nextjs-app
+
+==========================================
+3. NODE.JS ENVIRONMENT
+==========================================
+[SUCCESS] Node.js installed: v20.20.0
+[SUCCESS] NPM installed: 10.8.2
+[SUCCESS] PM2 installed: 6.0.14
+
+==========================================
+4. PM2 PROCESS STATUS
+==========================================
+┌────┬───────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name          │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼───────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ nextjs-app    │ default     │ N/A     │ cluster │ 0        │ 0      │ 16   │ errored   │ 0%       │ 0b       │ ubuntu   │ disabled │
+└────┴───────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+
+[SUCCESS] Application 'nextjs-app' found in PM2
+
+ Describing process with id 0 - name nextjs-app 
+┌───────────────────┬─────────────────────────────────────────┐
+│ status            │ errored                                 │
+│ name              │ nextjs-app                              │
+│ namespace         │ default                                 │
+│ version           │ N/A                                     │
+│ restarts          │ 16                                      │
+│ uptime            │ 0                                       │
+│ script path       │ /usr/bin/npm                            │
+│ script args       │ start                                   │
+│ error log path    │ /var/www/nextjs-app/logs/err.log        │
+│ out log path      │ /var/www/nextjs-app/logs/out.log        │
+│ pid path          │ /home/ubuntu/.pm2/pids/nextjs-app-0.pid │
+│ interpreter       │ /usr/bin/node                           │
+│ interpreter args  │ N/A                                     │
+│ script id         │ 0                                       │
+│ exec cwd          │ /var/www/nextjs-app/current             │
+│ exec mode         │ cluster_mode                            │
+│ node.js version   │ 20.20.0                                 │
+│ node env          │ N/A                                     │
+│ watch & reload    │ ✘                                       │
+│ unstable restarts │ 0                                       │
+│ created at        │ N/A                                     │
+└───────────────────┴─────────────────────────────────────────┘
+ Divergent env variables from local env 
+┌────────────────┬─────────────────────────────────────┐
+│ PWD            │ /var/www/nextjs-app/current         │
+│ SSH_CONNECTION │ 52.161.55.194 17408 172.31.0.150 22 │
+│ SHLVL          │ 1                                   │
+│ XDG_SESSION_ID │ 245                                 │
+│ SSH_CLIENT     │ 52.161.55.194 17408 22              │
+│ OLDPWD         │ /var/www/nextjs-app/current         │
+└────────────────┴─────────────────────────────────────┘
+
+ Add your own code metrics: http://bit.ly/code-metrics
+ Use `pm2 logs nextjs-app [--lines 1000]` to display logs
+ Use `pm2 env 0` to display environment variables
+ Use `pm2 monit` to monitor CPU and Memory usage nextjs-app
+[ERROR] Application status: NOT ONLINE
+
+==========================================
+5. APPLICATION DIRECTORY
+==========================================
+[SUCCESS] App directory exists: /var/www/nextjs-app
+
+[INFO] Directory contents:
+total 32K
+drwxr-xr-x 7 ubuntu ubuntu 4.0K Jan 21 16:32 .
+drwxr-xr-x 4 root   root   4.0K Jan 20 15:25 ..
+drwxr-xr-x 5 ubuntu ubuntu 4.0K Jan 20 16:47 backup-20260120_191557
+drwxr-xr-x 5 ubuntu ubuntu 4.0K Jan 20 19:16 backup-20260120_194106
+drwxr-xr-x 5 ubuntu ubuntu 4.0K Jan 20 19:41 backup-20260121_163244
+drwxr-xr-x 5 ubuntu ubuntu 4.0K Jan 21 16:32 current
+-rw-r--r-- 1 ubuntu ubuntu  636 Jan 21 16:33 ecosystem.config.js
+drwxrwxr-x 2 ubuntu ubuntu 4.0K Jan 20 16:11 logs
+[SUCCESS] Current deployment exists
+
+[INFO] Current deployment contents:
+total 524K
+drwxr-xr-x   5 ubuntu ubuntu 4.0K Jan 21 16:32 .
+drwxr-xr-x   7 ubuntu ubuntu 4.0K Jan 21 16:32 ..
+-rw-------   1 ubuntu ubuntu  417 Jan 21 16:32 .env.production
+drwxr-xr-x   8 ubuntu ubuntu 4.0K Jan 21 16:32 .next
+-rw-r--r--   1 ubuntu ubuntu  636 Jan 21 16:32 ecosystem.config.js
+-rwxr-xr-x   1 ubuntu ubuntu 2.4K Jan 21 16:32 fetch-ssm-env.sh
+-rw-r--r--   1 ubuntu ubuntu 1.5K Jan 21 16:32 next.config.js
+drwxrwxr-x 565 ubuntu ubuntu  20K Jan 21 16:33 node_modules
+-rw-r--r--   1 ubuntu ubuntu 465K Jan 21 16:32 package-lock.json
+-rw-r--r--   1 ubuntu ubuntu 2.5K Jan 21 16:32 package.json
+drwxr-xr-x   9 ubuntu ubuntu 4.0K Jan 21 16:32 public
+
+[INFO] Checking critical files...
+[SUCCESS] package.json found
+[SUCCESS] .next directory found
+[SUCCESS] node_modules found
+[SUCCESS] .env.production found
+
+[INFO] .next directory contents:
+total 260K
+drwxr-xr-x 8 ubuntu ubuntu 4.0K Jan 21 16:32 .
+drwxr-xr-x 5 ubuntu ubuntu 4.0K Jan 21 16:32 ..
+-rw-r--r-- 1 ubuntu ubuntu   21 Jan 21 16:32 BUILD_ID
+-rw-r--r-- 1 ubuntu ubuntu 8.8K Jan 21 16:32 app-path-routes-manifest.json
+drwxr-xr-x 3 ubuntu ubuntu 4.0K Jan 21 16:32 build
+-rw-r--r-- 1 ubuntu ubuntu  535 Jan 21 16:32 build-manifest.json
+drwxr-xr-x 2 ubuntu ubuntu 4.0K Jan 21 16:32 cache
+drwxr-xr-x 2 ubuntu ubuntu 4.0K Jan 21 16:32 diagnostics
+-rw-r--r-- 1 ubuntu ubuntu  111 Jan 21 16:32 export-marker.json
+-rw-r--r-- 1 ubuntu ubuntu  234 Jan 21 16:32 fallback-build-manifest.json
+-rw-r--r-- 1 ubuntu ubuntu 1.1K Jan 21 16:32 images-manifest.json
+-rw-r--r-- 1 ubuntu ubuntu 5.4K Jan 21 16:32 next-minimal-server.js.nft.json
+-rw-r--r-- 1 ubuntu ubuntu  40K Jan 21 16:32 next-server.js.nft.json
+-rw-r--r-- 1 ubuntu ubuntu   20 Jan 21 16:32 package.json
+-rw-r--r-- 1 ubuntu ubuntu  37K Jan 21 16:32 prerender-manifest.json
+-rw-r--r-- 1 ubuntu ubuntu 8.7K Jan 21 16:32 required-server-files.json
+-rw-r--r-- 1 ubuntu ubuntu  29K Jan 21 16:32 routes-manifest.json
+drwxr-xr-x 7 ubuntu ubuntu 4.0K Jan 21 16:32 server
+drwxr-xr-x 5 ubuntu ubuntu 4.0K Jan 21 16:32 static
+-rw-r--r-- 1 ubuntu ubuntu  56K Jan 21 16:32 trace
+-rw-r--r-- 1 ubuntu ubuntu 1.1K Jan 21 16:32 trace-build
+-rw-r--r-- 1 ubuntu ubuntu    0 Jan 21 16:32 turbopack
+drwxr-xr-x 2 ubuntu ubuntu 4.0K Jan 21 16:32 types
+[SUCCESS] Build ID: gyIK71ZBdo454k25pcBDF
+[WARNING] No deployment info file found
+
+[INFO] Available backups:
+/var/www/nextjs-app/backup-20260121_163244
+/var/www/nextjs-app/backup-20260120_194106
+/var/www/nextjs-app/backup-20260120_191557
+
+==========================================
+6. NETWORK & PORTS
+==========================================
+[INFO] Expected application port: 3000
+
+[INFO] Listening ports:
+tcp   LISTEN 0      4096             0.0.0.0:3000       0.0.0.0:*          
+tcp   LISTEN 0      4096       127.0.0.53%lo:53         0.0.0.0:*          
+tcp   LISTEN 0      4096           127.0.0.1:3004       0.0.0.0:*          
+tcp   LISTEN 0      4096           127.0.0.1:8081       0.0.0.0:*          
+tcp   LISTEN 0      4096           127.0.0.1:9090       0.0.0.0:*          
+tcp   LISTEN 0      4096           127.0.0.1:9101       0.0.0.0:*          
+tcp   LISTEN 0      4096          127.0.0.54:53         0.0.0.0:*          
+tcp   LISTEN 0      511              0.0.0.0:443        0.0.0.0:*          
+tcp   LISTEN 0      4096           127.0.0.1:27017      0.0.0.0:*          
+tcp   LISTEN 0      4096             0.0.0.0:22         0.0.0.0:*          
+tcp   LISTEN 0      511              0.0.0.0:80         0.0.0.0:*          
+tcp   LISTEN 0      4096                [::]:3000          [::]:*          
+tcp   LISTEN 0      511                 [::]:443           [::]:*          
+tcp   LISTEN 0      4096                [::]:22            [::]:*          
+tcp   LISTEN 0      511                 [::]:80            [::]:*          
+
+[SUCCESS] Application is listening on port 3000
+
+==========================================
+7. HTTP HEALTH CHECK
+==========================================
+[INFO] Testing HTTP response on localhost:3000...
+[ERROR] HTTP response: 307 (FAILED)
+
+[INFO] Response headers:
+HTTP/1.1 307 Temporary Redirect
+location: /login
+Date: Wed, 21 Jan 2026 16:55:21 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+
+==========================================
+8. APPLICATION LOGS (Last 30 lines)
+==========================================
+=== OUTPUT LOGS ===
+[TAILING] Tailing last 30 lines for [nextjs-app] process (change the value with --lines option)
+/var/www/nextjs-app/logs/out.log last 30 lines:
+0|nextjs-a | > next start
+0|nextjs-a | 
+0|nextjs-a | 2026-01-21 16:33:50: 2026-01-21 16:33:51: 
+0|nextjs-a | > next-app@0.1.0 start
+0|nextjs-a | > next start
+0|nextjs-a | 
+0|nextjs-a | 2026-01-21 16:33:51: 2026-01-21 16:33:51: 
+0|nextjs-a | > next-app@0.1.0 start
+0|nextjs-a | > next start
+0|nextjs-a | 
+0|nextjs-a | 2026-01-21 16:33:51: 2026-01-21 16:33:52: 
+0|nextjs-a | > next-app@0.1.0 start
+0|nextjs-a | > next start
+0|nextjs-a | 
+0|nextjs-a | 2026-01-21 16:33:52: 2026-01-21 16:33:52: 
+0|nextjs-a | > next-app@0.1.0 start
+0|nextjs-a | > next start
+0|nextjs-a | 
+0|nextjs-a | 2026-01-21 16:33:53: 2026-01-21 16:33:53: 
+0|nextjs-a | > next-app@0.1.0 start
+0|nextjs-a | > next start
+0|nextjs-a | 
+0|nextjs-a | 2026-01-21 16:33:53: 2026-01-21 16:33:53: 
+0|nextjs-a | > next-app@0.1.0 start
+0|nextjs-a | > next start
+0|nextjs-a | 
+0|nextjs-a | 2026-01-21 16:33:54: 2026-01-21 16:33:54: 
+0|nextjs-a | > next-app@0.1.0 start
+0|nextjs-a | > next start
+0|nextjs-a | 
+
+
+=== ERROR LOGS ===
+[TAILING] Tailing last 30 lines for [nextjs-app] process (change the value with --lines option)
+/var/www/nextjs-app/logs/err.log last 30 lines:
+
+==========================================
+9. ENVIRONMENT VARIABLES
+==========================================
+[SUCCESS] .env.production exists
+[INFO] Number of variables: 8
+[INFO] File size: 417 bytes
+
+[INFO] Variable names (values hidden for security):
+  NODE_ENV
+  PORT
+  JWT_SECRET
+  MONGODB_URI
+
+==========================================
+10. REVERSE PROXY CHECK
+==========================================
+[INFO] NGINX installed: nginx version: nginx/1.24.0 (Ubuntu)
+
+[INFO] NGINX status:
+● nginx.service - A high performance web server and a reverse proxy server
+     Loaded: loaded (/usr/lib/systemd/system/nginx.service; enabled; preset: enabled)
+     Active: active (running) since Tue 2026-01-20 10:44:55 UTC; 1 day 6h ago
+       Docs: man:nginx(8)
+   Main PID: 632 (nginx)
+      Tasks: 3 (limit: 2213)
+     Memory: 6.6M (peak: 14.4M swap: 4.3M swap peak: 5.0M)
+        CPU: 6.707s
+     CGroup: /system.slice/nginx.service
+             ├─632 "nginx: master process /usr/sbin/nginx -g daemon on; master_process on;"
+             ├─634 "nginx: worker process"
+             └─635 "nginx: worker process"
+
+Jan 20 10:44:55 ip-172-31-0-150 systemd[1]: Starting nginx.service - A high performance web server and a reverse proxy server...
+Jan 20 10:44:55 ip-172-31-0-150 nginx[550]: 2026/01/20 10:44:55 [warn] 550#550: protocol options redefined for [::]:443 in /etc/nginx/sites-enabled/sapient-mpencil:20
+
+[INFO] NGINX configuration test:
+2026/01/21 16:55:22 [warn] 454409#454409: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /etc/nginx/nginx.conf:1
+2026/01/21 16:55:22 [warn] 454409#454409: protocol options redefined for [::]:443 in /etc/nginx/sites-enabled/sapient-mpencil:20
+2026/01/21 16:55:22 [emerg] 454409#454409: cannot load certificate "/etc/letsencrypt/live/app.mpencil.in/fullchain.pem": BIO_new_file() failed (SSL: error:8000000D:system library::Permission denied:calling fopen(/etc/letsencrypt/live/app.mpencil.in/fullchain.pem, r) error:10080002:BIO routines::system lib)
+nginx: configuration file /etc/nginx/nginx.conf test failed

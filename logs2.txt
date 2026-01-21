@@ -118,3 +118,8 @@ sudo nginx -t && sudo systemctl reload nginx
 After this Nginx fix, no more 502 errors! 🚀
 
 The complete guide is in the file with examples and explanations!
+
+============
+ubuntu@ip-172-31-0-150:~$ cd /etc/nginx/sites-enabled/
+ubuntu@ip-172-31-0-150:/etc/nginx/sites-enabled$ ls
+app-mpencil.save  mpencil-app  sapient-mpencil

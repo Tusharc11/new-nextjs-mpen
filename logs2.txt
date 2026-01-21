@@ -1,6 +1,14 @@
-# Run this all-in-one command
-ssh ubuntu@your-ec2-ip << 'EOF'
-echo "=== 1. PM2 Status ==="
+a);e.s(["default",0,n])}];
+ubuntu@ip-172-31-0-150:/var/www/nextjs-app/current$ curl -I http://localhost:3000/
+HTTP/1.1 307 Temporary Redirect
+location: /login
+Date: Wed, 21 Jan 2026 19:15:40 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+ssh: Could not resolve hostname your-ec2-ip: Temporary failure in name resolution
+ubuntu@ip-172-31-0-150:~$ echo "=== 1. PM2 Status ==="
 pm2 status
 
 echo -e "\n=== 2. Is Port 3000 Listening? ==="
@@ -17,4 +25,62 @@ pm2 logs nextjs-app --lines 30 --nostream 2>&1 | tail -30
 
 echo -e "\n=== 6. Nginx Status ==="
 sudo systemctl status nginx | head -3
-EOF
+=== 1. PM2 Status ===
+┌────┬───────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name          │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼───────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ nextjs-app    │ default     │ N/A     │ cluster │ 480511   │ 46m    │ 0    │ online    │ 0%       │ 45.3mb   │ ubuntu   │ disabled │
+└────┴───────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+
+=== 2. Is Port 3000 Listening? ===
+tcp   LISTEN 0      511                    *:3000             *:*    users:(("next-server (v1",pid=480532,fd=18))                                
+
+=== 3. Test Local Connection ===
+HTTP/1.1 307 Temporary Redirect
+location: /login
+Date: Wed, 21 Jan 2026 19:18:53 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+
+=== 4. Can We Reach External API? ===
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0curl: (6) Could not resolve host: app.mpencil.io
+
+=== 5. Recent Application Logs ===
+0|nextjs-a | > next-app@0.1.0 start
+0|nextjs-a | > next start
+0|nextjs-a | 
+0|nextjs-a | 2026-01-21 16:33:54: 2026-01-21 16:33:54: 
+0|nextjs-a | > next-app@0.1.0 start
+0|nextjs-a | > next start
+0|nextjs-a | 
+0|nextjs-a | 2026-01-21 16:33:54: 2026-01-21T17:22:41:    ▲ Next.js 16.0.7
+0|nextjs-a | 2026-01-21T17:22:41:    - Local:         http://localhost:3000
+0|nextjs-a | 2026-01-21T17:22:41:    - Network:       http://172.31.0.150:3000
+0|nextjs-a | 2026-01-21T17:22:41: 
+0|nextjs-a | 2026-01-21T17:22:41:  ✓ Starting...
+0|nextjs-a | 2026-01-21T17:22:42:  ✓ Ready in 319ms
+0|nextjs-a | 2026-01-21 17:55:48: 
+0|nextjs-a | > next-app@0.1.0 start
+0|nextjs-a | > next start
+0|nextjs-a | 
+0|nextjs-a | 2026-01-21T18:09:17: 
+0|nextjs-a | > next-app@0.1.0 start
+0|nextjs-a | > next start
+0|nextjs-a | 
+0|nextjs-a | 2026-01-21T18:22:24: 
+0|nextjs-a | > next-app@0.1.0 start
+0|nextjs-a | > next start
+0|nextjs-a | 
+0|nextjs-a | 2026-01-21T18:32:35: 
+0|nextjs-a | > next-app@0.1.0 start
+0|nextjs-a | > next start
+0|nextjs-a | 
+
+
+=== 6. Nginx Status ===
+● nginx.service - A high performance web server and a reverse proxy server
+     Loaded: loaded (/usr/lib/systemd/system/nginx.service; enabled; preset: enabled)
+     Active: active (running) since Tue 2026-01-20 10:44:55 UTC; 1 day 8h ago

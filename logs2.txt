@@ -1,45 +1,14 @@
-ubuntu@ip-172-31-0-150:/etc/nginx/sites-enabled$ sudo cat mpencil-app 
-# HTTP Server - Will redirect to HTTPS after SSL is set up
-server {
-    server_name app.mpencil.in;
+# 1. Backup
+sudo cp /etc/nginx/sites-enabled/mpencil-app /etc/nginx/sites-enabled/mpencil-app.backup
 
-    # For now, allow HTTP (we'll add SSL next)
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-        
-        # Timeouts
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-    }
+# 2. Add the buffer settings automatically
+sudo sed -i '/proxy_pass http:\/\/localhost:3000;/a\        \n        proxy_buffer_size 16k;\n        proxy_buffers 4 16k;\n        proxy_busy_buffers_size 32k;' /etc/nginx/sites-enabled/mpencil-app
 
-    # Increase max upload size for file uploads
-    client_max_body_size 50M;
+# 3. Test
+sudo nginx -t
 
-    listen [::]:443 ssl ipv6only=on; # managed by Certbot
-    listen 443 ssl; # managed by Certbot
-    ssl_certificate /etc/letsencrypt/live/app.mpencil.in/fullchain.pem; # managed by Certbot
-    ssl_certificate_key /etc/letsencrypt/live/app.mpencil.in/privkey.pem; # managed by Certbot
-    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+# 4. If test passes, reload
+sudo systemctl reload nginx
 
-}
-
-server {
-    if ($host = app.mpencil.in) {
-        return 301 https://$host$request_uri;
-    } # managed by Certbot
-
-
-    listen 80;
-    listen [::]:80;
-    server_name app.mpencil.in;
-    return 404; # managed by Certbot
+# 5. Verify
+sudo tail -20 /var/log/nginx/error.log
